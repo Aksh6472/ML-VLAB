@@ -63,6 +63,9 @@ interface ProgressContextType {
   getExperimentProgress: (experimentId: string) => ExperimentProgress;
   getCompletionPercent: (experimentId: string) => number;
   getOverallPercent: () => number;
+  isExperimentCompleted: (experimentId: string) => boolean;
+  isExperimentUnlocked: (experimentId: string) => boolean;
+  isFinalTestUnlocked: () => boolean;
   setLastVisited: (experimentId: string, section: string) => void;
   toggleBookmark: (bookmark: { id: string; type: string; experimentId: string; title: string }) => Promise<void>;
   isBookmarked: (id: string) => boolean;
@@ -212,6 +215,25 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   }, [progress.experiments]);
 
+  const isExperimentCompleted = useCallback((experimentId: string): boolean => {
+    return getCompletionPercent(experimentId) >= 100;
+  }, [getCompletionPercent]);
+
+  const isExperimentUnlocked = useCallback((experimentId: string): boolean => {
+    const num = parseInt(experimentId, 10);
+    if (isNaN(num) || num <= 1) return true;
+    return isExperimentCompleted(String(num - 1));
+  }, [isExperimentCompleted]);
+
+  const isFinalTestUnlocked = useCallback((): boolean => {
+    for (let i = 1; i <= 10; i++) {
+      if (!isExperimentCompleted(String(i))) {
+        return false;
+      }
+    }
+    return true;
+  }, [isExperimentCompleted]);
+
   const setLastVisited = useCallback((experimentId: string, section: string) => {
     setProgress(prev => ({
       ...prev,
@@ -332,6 +354,9 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       getExperimentProgress,
       getCompletionPercent,
       getOverallPercent,
+      isExperimentCompleted,
+      isExperimentUnlocked,
+      isFinalTestUnlocked,
       setLastVisited,
       toggleBookmark,
       isBookmarked,

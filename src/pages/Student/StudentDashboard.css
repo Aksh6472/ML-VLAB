@@ -9,10 +9,16 @@
 .dash-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: var(--space-8);
   flex-wrap: wrap;
   gap: var(--space-4);
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-left: 4px solid var(--accent-primary, #3182ce);
+  border-radius: var(--radius-xl, 14px);
+  padding: var(--space-6, 24px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 
 .dash-welcome-label {

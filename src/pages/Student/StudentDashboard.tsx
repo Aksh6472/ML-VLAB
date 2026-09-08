@@ -7,7 +7,7 @@ import './StudentDashboard.css';
 
 export default function StudentDashboard() {
   const { user, token } = useAuth();
-  const { progress, getCompletionPercent, getOverallPercent } = useProgress();
+  const { progress, getCompletionPercent, getOverallPercent, isExperimentUnlocked, isFinalTestUnlocked } = useProgress();
 
   const [classes, setClasses] = useState<any[]>([]);
 
@@ -25,6 +25,7 @@ export default function StudentDashboard() {
   }, [token]);
 
   const overallPercent = getOverallPercent();
+  const finalTestUnlocked = isFinalTestUnlocked();
 
   // Compute metrics
   let completedCount = 0;
@@ -35,13 +36,16 @@ export default function StudentDashboard() {
       aim: false, theory: false, pretest: false, procedure: false, results: false, posttest: false
     };
     const percent = getCompletionPercent(exp.id);
+    const unlocked = isExperimentUnlocked(exp.id);
     const pretestResult = progress.quizResults[`exp-${exp.id}-pretest`];
     const posttestResult = progress.quizResults[`exp-${exp.id}-posttest`];
     const steps = progress.procedureSteps[exp.id] || [];
     const completedStepsCount = steps.filter(Boolean).length;
 
     let status = 'Not Started';
-    if (percent === 100) {
+    if (!unlocked) {
+      status = 'Locked';
+    } else if (percent === 100) {
       status = 'Completed';
       completedCount++;
     } else if (percent > 0) {
@@ -53,6 +57,7 @@ export default function StudentDashboard() {
       exp,
       percent,
       status,
+      unlocked,
       pretestResult,
       posttestResult,
       completedStepsCount,
@@ -174,7 +179,12 @@ export default function StudentDashboard() {
       {/* Experiments Detailed Table */}
       <div className="dash-experiments-table-card">
         <div style={{ padding: 'var(--space-5)', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>Experiment Progress & Performance</h2>
+          <div>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>Experiment Progress & Performance</h2>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '2px 0 0' }}>
+              Complete experiments sequentially. Completing Exp N unlocks Exp N+1.
+            </p>
+          </div>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Database-backed official record</span>
         </div>
 
@@ -192,20 +202,27 @@ export default function StudentDashboard() {
               </tr>
             </thead>
             <tbody>
-              {experimentRows.map(({ exp, percent, status, pretestResult, posttestResult, completedStepsCount }) => (
-                <tr key={exp.id}>
+              {experimentRows.map(({ exp, percent, status, unlocked, pretestResult, posttestResult, completedStepsCount }) => (
+                <tr key={exp.id} style={{ opacity: unlocked ? 1 : 0.7 }}>
                   <td>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {String(exp.number).padStart(2, '0')}. {exp.shortTitle}
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {!unlocked && <span title="Complete previous experiment to unlock">🔒</span>}
+                      <span>{String(exp.number).padStart(2, '0')}. {exp.shortTitle}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                       {exp.category} · {exp.difficulty}
                     </div>
                   </td>
                   <td>
-                    <span className={`dash-status-badge ${status.toLowerCase().replace(' ', '-')}`}>
-                      {status === 'Completed' ? '✓ Completed' : status === 'In Progress' ? '● In Progress' : '○ Not Started'}
-                    </span>
+                    {!unlocked ? (
+                      <span className="dash-status-badge locked" style={{ background: 'rgba(113, 128, 150, 0.1)', color: '#718096', border: '1px solid #cbd5e0' }}>
+                        🔒 Locked
+                      </span>
+                    ) : (
+                      <span className={`dash-status-badge ${status.toLowerCase().replace(' ', '-')}`}>
+                        {status === 'Completed' ? '✓ Completed' : status === 'In Progress' ? '● In Progress' : '○ Not Started'}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span className="dash-progress-mini">
@@ -237,14 +254,50 @@ export default function StudentDashboard() {
                     )}
                   </td>
                   <td>
-                    <Link to={`/experiment/${exp.id}`} className="btn btn-ghost btn-sm">
-                      {status === 'Completed' ? 'Review' : 'Open'} →
-                    </Link>
+                    {unlocked ? (
+                      <Link to={`/experiment/${exp.id}`} className="btn btn-ghost btn-sm">
+                        {status === 'Completed' ? 'Review' : 'Open'} →
+                      </Link>
+                    ) : (
+                      <button className="btn btn-ghost btn-sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} title="Complete previous experiment to unlock">
+                        🔒 Locked
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Final Assessment Banner */}
+      <div className="dash-experiments-table-card" style={{ marginTop: 'var(--space-6)', padding: 'var(--space-6)', borderLeft: finalTestUnlocked ? '4px solid #38a169' : '4px solid #a0aec0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+          <div>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: finalTestUnlocked ? '#38a169' : '#718096', marginBottom: '4px' }}>
+              {finalTestUnlocked ? '🏆 UNLOCKED' : '🔒 FINAL ASSESSMENT LOCKED'}
+            </div>
+            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: 0 }}>
+              Final Machine Learning Assessment
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginTop: '4px', maxWidth: '600px' }}>
+              {finalTestUnlocked
+                ? 'Test your knowledge across all 10 ML experiments with our 30-question evaluation test and get personalized revision recommendations.'
+                : `Complete all 10 experiments in sequence to unlock the Final ML Assessment. (${completedCount}/10 completed)`}
+            </p>
+          </div>
+          <div>
+            {finalTestUnlocked ? (
+              <Link to="/final-test" className="btn btn-primary" style={{ background: '#38a169', border: 'none', padding: '10px 20px' }}>
+                Take Final Assessment →
+              </Link>
+            ) : (
+              <button className="btn btn-secondary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                🔒 Complete {10 - completedCount} More Experiment{10 - completedCount !== 1 ? 's' : ''}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

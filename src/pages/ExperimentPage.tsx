@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { experiments, getExperiment, normalizeExpId } from '../data/experiments';
 import { getExperimentContent } from '../data';
 import { useProgress } from '../context/ProgressContext';
+import { useAuth } from '../context/AuthContext';
 import PythonBlock from '../components/PythonBlock';
 import FormulaCard from '../components/FormulaCard';
 import Quiz from '../components/Quiz';
@@ -64,7 +65,8 @@ export default function ExperimentPage() {
   const normalizedId = normalizeExpId(id || '1');
   const expMeta = getExperiment(normalizedId);
   const content = getExperimentContent(normalizedId);
-  const { getExperimentProgress, markSectionComplete, setLastVisited, saveProcedureStep, getProcedureSteps } = useProgress();
+  const { user } = useAuth();
+  const { getExperimentProgress, markSectionComplete, setLastVisited, saveProcedureStep, getProcedureSteps, isExperimentUnlocked } = useProgress();
 
   const activeSection = (section as SectionKey) || 'aim';
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -76,6 +78,10 @@ export default function ExperimentPage() {
     window.scrollTo(0, 0);
   }, [normalizedId, section]);
   
+  if (user?.role === 'student' && !isExperimentUnlocked(normalizedId)) {
+    return <Navigate to="/student/dashboard" replace />;
+  }
+
   if (!section && expMeta) {
     return <Navigate to={`/experiment/${normalizedId}/aim`} replace />;
   }

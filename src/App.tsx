@@ -22,6 +22,7 @@ const StudentProfile = lazy(() => import('./pages/Student/StudentProfile'));
 const TeacherDashboard = lazy(() => import('./pages/Teacher/TeacherDashboard'));
 const StudentDetailView = lazy(() => import('./pages/Teacher/StudentDetailView'));
 const JoinClassPage = lazy(() => import('./pages/Student/JoinClassPage'));
+const FinalTest = lazy(() => import('./pages/Student/FinalTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function LoadingFallback() {
@@ -97,10 +98,11 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* ── Shared Educational & Student routes ───────────────────────── */}
                   <Route
                     path="/experiments"
                     element={
-                      <ProtectedRoute role="student">
+                      <ProtectedRoute>
                         <ExperimentsIndex />
                       </ProtectedRoute>
                     }
@@ -108,7 +110,7 @@ export default function App() {
                   <Route
                     path="/experiment/:id/:section?"
                     element={
-                      <ProtectedRoute role="student">
+                      <ProtectedRoute>
                         <ExperimentPage />
                       </ProtectedRoute>
                     }
@@ -116,7 +118,7 @@ export default function App() {
                   <Route
                     path="/learning-path"
                     element={
-                      <ProtectedRoute role="student">
+                      <ProtectedRoute>
                         <LearningPath />
                       </ProtectedRoute>
                     }
@@ -124,7 +126,7 @@ export default function App() {
                   <Route
                     path="/visual-lab"
                     element={
-                      <ProtectedRoute role="student">
+                      <ProtectedRoute>
                         <VisualLab />
                       </ProtectedRoute>
                     }
@@ -132,8 +134,16 @@ export default function App() {
                   <Route
                     path="/glossary"
                     element={
-                      <ProtectedRoute role="student">
+                      <ProtectedRoute>
                         <Glossary />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/final-test"
+                    element={
+                      <ProtectedRoute role="student">
+                        <FinalTest />
                       </ProtectedRoute>
                     }
                   />
