@@ -49,9 +49,9 @@ const renderVisualization = (vizId: string) => {
 
 const parseBoldText = (text: string | React.ReactNode) => {
   if (typeof text !== 'string') return text;
-  const parts = text.split(/(\**.*?\**)/g);
+  const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
       return <strong key={i} className="highlight-keyword">{part.slice(2, -2)}</strong>;
     }
     return part;

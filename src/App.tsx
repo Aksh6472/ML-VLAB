@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy loaded pages
+const Home = lazy(() => import('./pages/Home'));
 const ExperimentsIndex = lazy(() => import('./pages/ExperimentsIndex'));
 const ExperimentPage = lazy(() => import('./pages/ExperimentPage'));
 const LearningPath = lazy(() => import('./pages/LearningPath'));
@@ -61,8 +62,8 @@ export default function App() {
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
-                  {/* Root — auth-aware redirect (no public home page) */}
-                  <Route path="/" element={<RootRedirect />} />
+                  {/* Root — public Home / Welcome page */}
+                  <Route path="/" element={<Home />} />
 
                   {/* Auth routes — always public */}
                   <Route path="/login" element={<Login />} />
