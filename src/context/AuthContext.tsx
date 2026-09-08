@@ -1,4 +1,3 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export interface User {
@@ -29,25 +28,17 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 const TOKEN_KEY = 'ml_vlab_jwt_token';
 const USER_KEY = 'ml_vlab_user_cache';
 
-const defaultStudentUser: User = {
-  id: 2,
-  studentId: 'RA2411027010104',
-  name: 'Akshayanivashini',
-  email: 'akshh6472@gmail.com',
-  role: 'student',
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem(USER_KEY);
-      return saved ? JSON.parse(saved) : defaultStudentUser;
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return defaultStudentUser;
+      return null;
     }
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchProfile = useCallback(async (authToken: string) => {
     try {
@@ -58,45 +49,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         setUser(data.user);
         localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      } else {
+        // Invalid token
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
       }
     } catch (err) {
       console.warn('Could not verify profile from server:', err);
     }
   }, []);
 
-  // Auto-authenticate with student session for background DB syncing
   useEffect(() => {
     async function initSession() {
       if (token) {
-        fetchProfile(token);
+        await fetchProfile(token);
       } else {
-        try {
-          const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'student@srm.edu', password: 'Student@123' }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setToken(data.token);
-            // Preserve user's display name if cached, or use returned user
-            const activeUser = {
-              ...data.user,
-              name: user?.name || data.user.name,
-              studentId: user?.studentId || data.user.studentId || 'RA2411027010104',
-              email: user?.email || data.user.email,
-            };
-            setUser(activeUser);
-            localStorage.setItem(TOKEN_KEY, data.token);
-            localStorage.setItem(USER_KEY, JSON.stringify(activeUser));
-          }
-        } catch {
-          // Keep default offline student session
-        }
+        setUser(null);
+        localStorage.removeItem(USER_KEY);
       }
+      setIsLoading(false);
     }
     initSession();
-  }, [token, fetchProfile, user?.name, user?.studentId, user?.email]);
+  }, [token, fetchProfile]);
 
   const login = useCallback(async (email: string, password: string) => {
     try {
@@ -143,8 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    // Reset to default active student session
-    setUser(defaultStudentUser);
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -154,10 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user || defaultStudentUser,
+        user,
         token,
-        isAuthenticated: true, // Always allow full direct laboratory access
-        isStudent: (user?.role || 'student') === 'student',
+        isAuthenticated: !!user && !!token,
+        isStudent: user?.role === 'student',
         isTeacher: user?.role === 'teacher',
         isLoading,
         login,

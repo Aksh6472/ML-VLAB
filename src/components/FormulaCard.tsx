@@ -12,7 +12,7 @@ interface FormulaCardProps {
 }
 
 const getKatex = () => {
-  if (typeof katexLib !== 'undefined' && katexLib?.render) return katexLib;
+  if (typeof katexLib !== 'undefined' && (katexLib as any).render) return katexLib;
   if (typeof window !== 'undefined' && (window as any).katex) return (window as any).katex;
   return null;
 };

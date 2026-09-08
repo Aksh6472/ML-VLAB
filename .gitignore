@@ -13,3 +13,6 @@ server/dist/
 Thumbs.db
 raw_request.txt
 
+
+# Added by ggshield
+.cache_ggshield

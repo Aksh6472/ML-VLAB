@@ -9,7 +9,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy loaded pages
-const Home = lazy(() => import('./pages/Home'));
 const ExperimentsIndex = lazy(() => import('./pages/ExperimentsIndex'));
 const ExperimentPage = lazy(() => import('./pages/ExperimentPage'));
 const LearningPath = lazy(() => import('./pages/LearningPath'));
@@ -21,6 +20,7 @@ const StudentDashboard = lazy(() => import('./pages/Student/StudentDashboard'));
 const StudentProfile = lazy(() => import('./pages/Student/StudentProfile'));
 const TeacherDashboard = lazy(() => import('./pages/Teacher/TeacherDashboard'));
 const StudentDetailView = lazy(() => import('./pages/Teacher/StudentDetailView'));
+const JoinClassPage = lazy(() => import('./pages/Student/JoinClassPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function LoadingFallback() {
@@ -38,11 +38,16 @@ function LoadingFallback() {
   );
 }
 
-function DashboardRedirect() {
-  const { isAuthenticated, isTeacher } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+/**
+ * Root redirect — authentication-aware:
+ *   • Not logged in          → /login
+ *   • Logged in as student   → /student/dashboard
+ *   • Logged in as teacher   → /teacher/dashboard
+ */
+function RootRedirect() {
+  const { isAuthenticated, isLoading, isTeacher } = useAuth();
+  if (isLoading) return <LoadingFallback />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <Navigate to={isTeacher ? '/teacher/dashboard' : '/student/dashboard'} replace />;
 }
 
@@ -56,20 +61,17 @@ export default function App() {
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/experiments" element={<ExperimentsIndex />} />
-                  <Route path="/experiment/:id" element={<ExperimentPage />} />
-                  <Route path="/learning-path" element={<LearningPath />} />
-                  <Route path="/glossary" element={<Glossary />} />
-                  <Route path="/visual-lab" element={<VisualLab />} />
+                  {/* Root — auth-aware redirect (no public home page) */}
+                  <Route path="/" element={<RootRedirect />} />
 
-                  {/* Direct Dashboard & Navigation (No login wall) */}
-                  <Route path="/login" element={<Navigate to="/student/dashboard" replace />} />
-                  <Route path="/register" element={<Navigate to="/student/dashboard" replace />} />
-                  <Route path="/dashboard" element={<Navigate to="/student/dashboard" replace />} />
+                  {/* Auth routes — always public */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
 
-                  {/* Protected Student routes */}
+                  {/* Convenience /dashboard → correct dashboard */}
+                  <Route path="/dashboard" element={<RootRedirect />} />
+
+                  {/* ── Student-only routes ───────────────────────── */}
                   <Route
                     path="/student/dashboard"
                     element={
@@ -86,8 +88,56 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/join/:code"
+                    element={
+                      <ProtectedRoute role="student">
+                        <JoinClassPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/experiments"
+                    element={
+                      <ProtectedRoute role="student">
+                        <ExperimentsIndex />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/experiment/:id/:section?"
+                    element={
+                      <ProtectedRoute role="student">
+                        <ExperimentPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/learning-path"
+                    element={
+                      <ProtectedRoute role="student">
+                        <LearningPath />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/visual-lab"
+                    element={
+                      <ProtectedRoute role="student">
+                        <VisualLab />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/glossary"
+                    element={
+                      <ProtectedRoute role="student">
+                        <Glossary />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                  {/* Protected Teacher routes */}
+                  {/* ── Teacher-only routes ───────────────────────── */}
                   <Route
                     path="/teacher/dashboard"
                     element={

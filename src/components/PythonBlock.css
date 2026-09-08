@@ -6,13 +6,15 @@
   overflow: hidden;
   margin: var(--space-5) 0;
   background: var(--code-bg);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, 'Courier New', monospace;
 }
 
+/* ── Title bar ─────────────────────────────────────── */
 .python-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--code-border);
   background: var(--bg-tertiary);
 }
@@ -24,14 +26,9 @@
 }
 
 .python-block-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--neutral-300);
-}
-
-[data-theme="dark"] .python-block-dot {
-  background: var(--neutral-600);
 }
 
 .python-block-dot:nth-child(1) { background: #ff5f56; }
@@ -40,50 +37,206 @@
 
 .python-block-title {
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
   color: var(--text-muted);
   margin-left: var(--space-2);
+  font-family: inherit;
 }
 
-.python-block-actions {
+/* ── Editable code area ────────────────────────────── */
+.python-editor-wrapper {
   display: flex;
-  gap: var(--space-2);
+  background: var(--code-bg);
+  min-height: 80px;
 }
 
-.python-block-btn {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  color: var(--text-tertiary);
+.python-line-numbers {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3);
+  background: rgba(0,0,0,0.15);
+  border-right: 1px solid var(--code-border);
+  min-width: 40px;
+  text-align: right;
+  user-select: none;
+  gap: 0;
+  line-height: 1.75;
+}
+
+.python-line-numbers span {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-family: inherit;
+  display: block;
+  line-height: 1.75;
+}
+
+.python-editor-textarea {
+  flex: 1;
+  padding: var(--space-4) var(--space-5);
   background: transparent;
-  border: 1px solid var(--border-secondary);
-  transition: all var(--duration-fast) var(--ease-out);
+  border: none;
+  outline: none;
+  color: var(--code-text, var(--text-primary));
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.75;
+  resize: none;
+  overflow: hidden;
+  width: 100%;
+  min-height: 80px;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
 }
 
-.python-block-btn:hover {
+/* Dark syntax colors for the textarea */
+[data-theme="dark"] .python-editor-textarea {
+  color: #e2e8f0;
+}
+
+.python-editor-textarea:focus {
+  background: rgba(74, 144, 226, 0.04);
+}
+
+/* ── Run / Reset bar ───────────────────────────────── */
+.python-run-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--code-border);
+  background: var(--bg-tertiary);
+  flex-wrap: wrap;
+}
+
+.python-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 20px;
+  background: #38a169;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+
+.python-run-btn:hover:not(:disabled) {
+  background: #2f855a;
+  transform: translateY(-1px);
+}
+
+.python-run-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.python-run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.python-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.python-reset-btn:hover:not(:disabled) {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: var(--border-primary);
 }
 
-.python-block-code {
+.python-reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.python-status-text {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.python-status-ready {
+  color: #38a169;
+}
+
+/* Loading spinner */
+.python-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Output block ──────────────────────────────────── */
+.python-output-block,
+.python-error-block {
+  border-top: 1px solid var(--code-border);
+  padding: var(--space-4);
+}
+
+.python-output-block {
+  background: #0d1117;
+}
+
+.python-error-block {
+  background: #1a0a0a;
+}
+
+.python-output-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b8191;
+  margin-bottom: var(--space-2);
+  font-family: inherit;
+}
+
+.python-output-pre {
   margin: 0;
-  padding: var(--space-5);
-  border: none;
-  border-radius: 0;
+  font-family: inherit;
   font-size: var(--text-sm);
-  line-height: 1.75;
-  overflow-x: auto;
+  line-height: 1.6;
+  color: #c9d1d9;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.python-block-code code {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: inherit;
+.python-error-pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: #fc8181;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
+/* ── Explanation block ─────────────────────────────── */
 .python-block-explanation {
   border-top: 1px solid var(--code-border);
   padding: var(--space-4) var(--space-5);
@@ -95,6 +248,7 @@
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin-bottom: var(--space-3);
+  font-family: var(--font-body, sans-serif);
 }
 
 .python-block-explain-list {
@@ -107,8 +261,14 @@
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);
   margin-bottom: var(--space-2);
+  font-family: var(--font-body, sans-serif);
 }
 
 .python-block-explain-list li:last-child {
   margin-bottom: 0;
+}
+
+/* spin keyframe (also used by ProtectedRoute spinner) */
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

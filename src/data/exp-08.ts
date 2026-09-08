@@ -15,7 +15,7 @@ export const exp08 = {
       title: '9.1 Introduction to Decision Trees',
       type: 'text',
       visualizationId: 'decision-tree',
-      content: 'Decision trees classify data by making a series of sequential decisions based on feature values. At each node, the algorithm chooses the feature and threshold that best splits the data into pure classes.',
+      content: '**Decision trees** classify data by making a series of sequential decisions based on **feature values**. At each node, the algorithm chooses the **feature** and **threshold** that best splits the data into **pure classes**.',
       codeExample: {
         title: 'Training a Decision Tree',
         code: `from sklearn.tree import DecisionTreeClassifier

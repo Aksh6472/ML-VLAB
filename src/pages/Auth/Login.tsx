@@ -14,11 +14,12 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If already authenticated, redirect
+  // If already authenticated, redirect immediately
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      const from = (location.state as any)?.from?.pathname || (user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
-      navigate(from, { replace: true });
+      const from = (location.state as any)?.from?.pathname;
+      const defaultDest = user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
+      navigate(from || defaultDest, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location]);
 
@@ -31,7 +32,15 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      // Redirection handled by useEffect or navigate here
+      // Navigate immediately using the user data returned by login
+      // (don't wait for the useEffect — this is faster and avoids a flash)
+      const from = (location.state as any)?.from?.pathname;
+      // We can't read `user` immediately since setState is async,
+      // but the /api/auth/login response includes the role.
+      // The AuthContext login() call already stored it; the useEffect will fire.
+      // As a belt-and-suspenders measure, determine destination from selected tab role:
+      const dest = from || (role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
+      navigate(dest, { replace: true });
     } else {
       setError(result.error || 'Failed to sign in. Please verify your credentials.');
     }
@@ -58,20 +67,21 @@ export default function Login() {
           <p className="auth-subtitle">Sign in to access your experiment records, quizzes, and learning dashboard.</p>
         </div>
 
+        {/* Role selector tabs */}
         <div className="auth-role-tabs">
           <button
             type="button"
             className={`auth-role-tab ${role === 'student' ? 'active' : ''}`}
             onClick={() => setRole('student')}
           >
-            🎓 Student Portal
+            🎓 Student
           </button>
           <button
             type="button"
             className={`auth-role-tab ${role === 'teacher' ? 'active' : ''}`}
             onClick={() => setRole('teacher')}
           >
-            👨‍🏫 Faculty / Teacher
+            👨‍🏫 Faculty
           </button>
         </div>
 

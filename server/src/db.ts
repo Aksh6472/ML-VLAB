@@ -157,9 +157,27 @@ export async function initDatabase(): Promise<void> {
       UNIQUE(user_id, experiment_id)
     );
 
+    CREATE TABLE IF NOT EXISTS virtual_labs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      invite_code TEXT UNIQUE NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS virtual_lab_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lab_id INTEGER NOT NULL REFERENCES virtual_labs(id) ON DELETE CASCADE,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at TEXT NOT NULL,
+      UNIQUE(lab_id, student_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_progress_user ON experiment_progress(user_id);
     CREATE INDEX IF NOT EXISTS idx_quizzes_user ON quiz_records(user_id);
+    CREATE INDEX IF NOT EXISTS idx_vlab_invite ON virtual_labs(invite_code);
   `);
 
   // Seed default teacher account if not present

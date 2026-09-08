@@ -15,7 +15,7 @@ export const exp06 = {
       title: '7.1 Introduction to SVM',
       type: 'text',
       visualizationId: 'svm',
-      content: 'A Support Vector Machine (SVM) finds the hyperplane that best separates classes with the maximum possible margin. The data points closest to the hyperplane are called support vectors.',
+      content: 'A **Support Vector Machine (SVM)** finds the **hyperplane** that best separates classes with the **maximum possible margin**. The data points closest to the hyperplane are called **support vectors**.',
       codeExample: {
         title: 'SVM with RBF Kernel',
         code: `from sklearn.svm import SVC

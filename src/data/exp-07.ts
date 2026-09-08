@@ -15,7 +15,7 @@ export const exp07 = {
       title: '8.1 Introduction to K-Means',
       type: 'text',
       visualizationId: 'kmeans',
-      content: 'K-Means is an unsupervised algorithm. It does not use labels. Instead, it groups data points into K clusters by minimizing the variance within each cluster.',
+      content: '**K-Means** is an **unsupervised algorithm**. It does not use labels. Instead, it groups data points into **K clusters** by minimizing the **variance within each cluster**.',
       codeExample: {
         title: 'K-Means and the Elbow Method',
         code: `from sklearn.cluster import KMeans

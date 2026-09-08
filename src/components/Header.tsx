@@ -1,7 +1,8 @@
 // src/components/Header.tsx
-import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import srmLogo from '../assets/srm-logo.png';
 import './Header.css';
@@ -40,11 +41,22 @@ function MoonIcon() {
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
   const { getOverallPercent } = useProgress();
-  const overallPercent = getOverallPercent();
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const overallPercent = getOverallPercent();
   const circumference = 2 * Math.PI * 7;
   const offset = circumference - (overallPercent / 100) * circumference;
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+    navigate('/login', { replace: true });
+  };
+
+  const dashboardPath = user?.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
 
   return (
     <header className="header" role="banner">
@@ -67,10 +79,19 @@ export default function Header() {
               {item.label}
             </NavLink>
           ))}
+          {isAuthenticated && (
+            <NavLink
+              to={dashboardPath}
+              className={({ isActive }) => `header-nav-link${isActive ? ' active' : ''}`}
+            >
+              Dashboard
+            </NavLink>
+          )}
         </nav>
 
         <div className="header-actions">
-          {overallPercent > 0 && (
+          {/* Progress ring — only for students */}
+          {isAuthenticated && user?.role === 'student' && overallPercent > 0 && (
             <div className="header-progress-badge" aria-label={`Overall progress: ${overallPercent}%`}>
               <svg className="header-progress-ring" viewBox="0 0 20 20">
                 <circle cx="10" cy="10" r="7" fill="none" stroke="var(--border-secondary)" strokeWidth="2" />
@@ -97,6 +118,67 @@ export default function Header() {
           >
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
+
+          {/* Auth area */}
+          {isAuthenticated && user ? (
+            <div className="header-user-menu-wrapper" style={{ position: 'relative' }}>
+              <button
+                className="header-user-btn"
+                onClick={() => setShowUserMenu(prev => !prev)}
+                aria-label="User menu"
+                title={user.name}
+              >
+                <span className="header-user-avatar">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="header-user-name">{user.name.split(' ')[0]}</span>
+                <span style={{ fontSize: '10px', opacity: 0.6 }}>▾</span>
+              </button>
+
+              {showUserMenu && (
+                <>
+                  {/* Backdrop to close on click-away */}
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="header-user-dropdown">
+                    <div className="header-user-dropdown-info">
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{user.name}</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: '2px' }}>{user.email}</div>
+                      {user.studentId && (
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                          ID: {user.studentId}
+                        </div>
+                      )}
+                      <span className="header-user-role-badge">
+                        {user.role === 'teacher' ? '👨‍🏫 Faculty' : '🎓 Student'}
+                      </span>
+                    </div>
+                    <div className="header-user-dropdown-divider" />
+                    <Link
+                      to={dashboardPath}
+                      className="header-user-dropdown-item"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      📊 My Dashboard
+                    </Link>
+                    <div className="header-user-dropdown-divider" />
+                    <button
+                      className="header-user-dropdown-item header-user-logout"
+                      onClick={handleLogout}
+                    >
+                      🚪 Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <Link to="/login" className="btn btn-primary" style={{ fontSize: 'var(--text-sm)', padding: '6px 16px' }}>
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -10,18 +10,42 @@ teacherRouter.use(...requireTeacher);
 // Get class-wide statistics
 teacherRouter.get('/stats', (req: AuthenticatedRequest, res: Response): void => {
   try {
-    const totalStudents = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get() as any;
+    // Check if teacher has any virtual labs with enrolled students
+    const hasEnrolledStudents = db.prepare(`
+      SELECT COUNT(DISTINCT vlm.student_id) as count
+      FROM virtual_lab_members vlm
+      JOIN virtual_labs vl ON vlm.lab_id = vl.id
+      WHERE vl.teacher_id = ?
+    `).get(req.user!.id) as any;
+
+    const enrolledCount = Number(hasEnrolledStudents?.count || 0);
+
+    // If teacher has enrolled students, filter by class; otherwise show all students
+    const studentFilter = enrolledCount > 0
+      ? `JOIN virtual_lab_members vlm ON u.id = vlm.student_id
+         JOIN virtual_labs vl ON vlm.lab_id = vl.id
+         WHERE u.role = 'student' AND vl.teacher_id = ?`
+      : `WHERE u.role = 'student' AND 1=?`; // 1=teacherId is always true, shows all students
+
+    const teacherIdParam = req.user!.id;
+
+    const totalStudents = db.prepare(`
+      SELECT COUNT(DISTINCT u.id) as count
+      FROM users u
+      ${studentFilter}
+    `).get(teacherIdParam) as any;
+
     const allProgress = db.prepare(`
-      SELECT ep.* FROM experiment_progress ep
+      SELECT DISTINCT ep.* FROM experiment_progress ep
       JOIN users u ON ep.user_id = u.id
-      WHERE u.role = 'student'
-    `).all();
+      ${studentFilter.replace('u.id = vlm.student_id', 'ep.user_id = vlm.student_id')}
+    `).all(teacherIdParam);
 
     const allQuizzes = db.prepare(`
-      SELECT qr.* FROM quiz_records qr
+      SELECT DISTINCT qr.* FROM quiz_records qr
       JOIN users u ON qr.user_id = u.id
-      WHERE u.role = 'student'
-    `).all();
+      ${studentFilter.replace('u.id = vlm.student_id', 'qr.user_id = vlm.student_id')}
+    `).all(teacherIdParam);
 
     let totalCompletedExperiments = 0;
     for (const p of allProgress) {
@@ -64,25 +88,53 @@ teacherRouter.get('/stats', (req: AuthenticatedRequest, res: Response): void => 
 teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void => {
   try {
     const search = String(req.query.search || '').trim().toLowerCase();
+    const teacherId = req.user!.id;
 
-    let query = `
-      SELECT id, student_id, name, email, created_at, last_login
-      FROM users
-      WHERE role = 'student'
-    `;
-    const params: any[] = [];
+    // Check if this teacher has any enrolled students in their labs
+    const enrollmentCheck = db.prepare(`
+      SELECT COUNT(DISTINCT vlm.student_id) as count
+      FROM virtual_lab_members vlm
+      JOIN virtual_labs vl ON vlm.lab_id = vl.id
+      WHERE vl.teacher_id = ?
+    `).get(teacherId) as any;
+    const hasEnrolled = Number(enrollmentCheck?.count || 0) > 0;
+
+    let query: string;
+    const params: any[] = [teacherId];
+
+    if (hasEnrolled) {
+      // Filter by class membership
+      query = `
+        SELECT DISTINCT u.id, u.student_id, u.name, u.email, u.created_at, u.last_login
+        FROM users u
+        JOIN virtual_lab_members vlm ON u.id = vlm.student_id
+        JOIN virtual_labs vl ON vlm.lab_id = vl.id
+        WHERE u.role = 'student' AND vl.teacher_id = ?
+      `;
+    } else {
+      // Fallback: show all students (demo/no-class mode)
+      query = `
+        SELECT u.id, u.student_id, u.name, u.email, u.created_at, u.last_login
+        FROM users u
+        WHERE u.role = 'student'
+      `;
+      params.length = 0; // no teacherId param needed
+    }
 
     if (search) {
-      query += ` AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ? OR LOWER(student_id) LIKE ?)`;
+      const connector = hasEnrolled ? ' AND' : ' AND';
+      query += `${connector} (LOWER(u.name) LIKE ? OR LOWER(u.email) LIKE ? OR LOWER(COALESCE(u.student_id,'')) LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    query += ` ORDER BY name ASC`;
+    query += ` ORDER BY u.name ASC`;
 
-    const students = db.prepare(query).all(...params);
+    const students = params.length > 0
+      ? db.prepare(query).all(...params)
+      : db.prepare(query).all();
 
     // Attach computed metrics for each student
-    const studentSummaries = students.map(student => {
+    const studentSummaries = students.map((student: any) => {
       const progressRows = db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(student.id);
       const quizRows = db.prepare('SELECT * FROM quiz_records WHERE user_id = ?').all(student.id);
 
@@ -106,19 +158,19 @@ teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void 
       const overallPercent = Math.min(100, Math.round((totalCompletedSections / 60) * 100));
       const notStartedCount = Math.max(0, 10 - completedCount - inProgressCount);
 
-      const pretests = quizRows.filter(q => q.quiz_type === 'pretest');
-      const posttests = quizRows.filter(q => q.quiz_type === 'posttest');
+      const pretests = quizRows.filter((q: any) => q.quiz_type === 'pretest');
+      const posttests = quizRows.filter((q: any) => q.quiz_type === 'posttest');
 
       const avgPretest = pretests.length > 0
-        ? Number((pretests.reduce((acc, q) => acc + q.percentage, 0) / pretests.length).toFixed(1))
+        ? Number((pretests.reduce((acc: number, q: any) => acc + q.percentage, 0) / pretests.length).toFixed(1))
         : null;
 
       const avgPosttest = posttests.length > 0
-        ? Number((posttests.reduce((acc, q) => acc + q.percentage, 0) / posttests.length).toFixed(1))
+        ? Number((posttests.reduce((acc: number, q: any) => acc + q.percentage, 0) / posttests.length).toFixed(1))
         : null;
 
       const avgQuizScore = quizRows.length > 0
-        ? Number((quizRows.reduce((acc, q) => acc + q.percentage, 0) / quizRows.length).toFixed(1))
+        ? Number((quizRows.reduce((acc: number, q: any) => acc + q.percentage, 0) / quizRows.length).toFixed(1))
         : null;
 
       return {
@@ -147,14 +199,41 @@ teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void 
 });
 
 // Individual student detailed view
+// Note: If teacher has enrolled students, verify the student belongs to their class.
+// If teacher has no classes yet, allow viewing any student (demo mode).
 teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): void => {
   try {
     const studentId = Number(req.params.id);
-    const student = db.prepare("SELECT id, student_id, name, email, created_at, last_login FROM users WHERE id = ? AND role = 'student'").get(studentId) as any
-      || db.prepare('SELECT id, student_id, name, email, created_at, last_login FROM users WHERE id = ?').get(studentId) as any;
+    const teacherId = req.user!.id;
+
+    // Check if teacher has any enrolled students
+    const enrollmentCheck = db.prepare(`
+      SELECT COUNT(DISTINCT vlm.student_id) as count
+      FROM virtual_lab_members vlm
+      JOIN virtual_labs vl ON vlm.lab_id = vl.id
+      WHERE vl.teacher_id = ?
+    `).get(teacherId) as any;
+    const hasEnrolled = Number(enrollmentCheck?.count || 0) > 0;
+
+    let student: any;
+    if (hasEnrolled) {
+      // Verify student belongs to one of this teacher's labs
+      student = db.prepare(`
+        SELECT DISTINCT u.id, u.student_id, u.name, u.email, u.created_at, u.last_login 
+        FROM users u
+        JOIN virtual_lab_members vlm ON u.id = vlm.student_id
+        JOIN virtual_labs vl ON vlm.lab_id = vl.id
+        WHERE u.id = ? AND u.role = 'student' AND vl.teacher_id = ?
+      `).get(studentId, teacherId) as any;
+    } else {
+      // No class setup — allow viewing any student
+      student = db.prepare(
+        `SELECT id, student_id, name, email, created_at, last_login FROM users WHERE id = ? AND role = 'student'`
+      ).get(studentId) as any;
+    }
 
     if (!student) {
-      res.status(404).json({ error: 'Student not found.' });
+      res.status(404).json({ error: 'Student not found or access denied.' });
       return;
     }
 

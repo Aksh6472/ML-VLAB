@@ -15,7 +15,7 @@ export const exp09 = {
       title: '10.1 Introduction to Random Forest',
       type: 'text',
       visualizationId: 'random-forest',
-      content: 'A Random Forest is an ensemble of Decision Trees. It uses "bagging" (training each tree on a random subset of data) and feature randomness (considering only a random subset of features for each split) to create a diverse "forest" of uncorrelated trees.',
+      content: 'A **Random Forest** is an **ensemble of Decision Trees**. It uses **bagging** (training each tree on a **random subset of data**) and **feature randomness** (considering only a random subset of features for each split) to create a diverse **forest of uncorrelated trees**.',
       codeExample: {
         title: 'Training a Random Forest',
         code: `from sklearn.ensemble import RandomForestClassifier

@@ -16,10 +16,15 @@ authRouter.post('/register', async (req, res): Promise<void> => {
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
-    const assignedRole = role === 'teacher' ? 'teacher' : 'student';
+    if (role === 'teacher') {
+      res.status(403).json({ error: 'Teacher registration is restricted. Please contact the administrator.' });
+      return;
+    }
 
-    if (assignedRole === 'student' && !studentId) {
-      res.status(400).json({ error: 'Student Register Number / ID is required for student accounts.' });
+    const assignedRole = 'student';
+
+    if (!studentId) {
+      res.status(400).json({ error: 'Student Register Number / ID is required.' });
       return;
     }
 

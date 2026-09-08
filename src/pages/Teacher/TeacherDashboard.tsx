@@ -39,24 +39,32 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [classes, setClasses] = useState<any[]>([]);
+  const [newClassName, setNewClassName] = useState('');
+  const [creatingClass, setCreatingClass] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
       setLoading(true);
       setError(null);
 
-      const [statsRes, studentsRes] = await Promise.all([
+      const [statsRes, studentsRes, classesRes] = await Promise.all([
         fetch('/api/teacher/stats', { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/teacher/students?search=${encodeURIComponent(search)}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/classes', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      if (statsRes.ok && studentsRes.ok) {
+      if (statsRes.ok && studentsRes.ok && classesRes.ok) {
         const statsData = await statsRes.json();
         const studentsData = await studentsRes.json();
+        const classesData = await classesRes.json();
+        
         setStats(statsData);
         setStudents(studentsData.students || []);
+        setClasses(classesData);
       } else {
-        setError('Failed to fetch class records.');
+        setError('Failed to fetch teacher records.');
       }
     } catch (err) {
       setError('Network error connecting to instructor backend.');
@@ -64,6 +72,32 @@ export default function TeacherDashboard() {
       setLoading(false);
     }
   }, [token, search]);
+
+  const handleCreateClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClassName.trim() || !token) return;
+
+    try {
+      setCreatingClass(true);
+      const res = await fetch('/api/classes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newClassName.trim() })
+      });
+      
+      if (res.ok) {
+        setNewClassName('');
+        fetchData(); // Refresh list
+      }
+    } catch (err) {
+      console.error('Failed to create class:', err);
+    } finally {
+      setCreatingClass(false);
+    }
+  };
 
   useEffect(() => {
     const delayTimer = setTimeout(() => {
@@ -130,6 +164,63 @@ export default function TeacherDashboard() {
           </div>
         </div>
       )}
+
+      {/* Virtual Labs / Classes */}
+      <div className="teacher-students-card" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ padding: 'var(--space-5)', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+          <div>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>My Virtual Labs (Classes)</h2>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+              Create labs and share the invite code with your students.
+            </p>
+          </div>
+          <form onSubmit={handleCreateClass} style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <input
+              type="text"
+              value={newClassName}
+              onChange={(e) => setNewClassName(e.target.value)}
+              placeholder="e.g. AI-ML Batch A"
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-primary)', fontSize: '14px' }}
+            />
+            <button type="submit" className="btn btn-primary" disabled={creatingClass || !newClassName.trim()} style={{ padding: '8px 16px', fontSize: '14px' }}>
+              {creatingClass ? 'Creating...' : 'Create Class'}
+            </button>
+          </form>
+        </div>
+        
+        <div style={{ padding: 'var(--space-5)', display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          {classes.length === 0 ? (
+            <div className="dash-empty-state" style={{ width: '100%', margin: 0 }}>
+              You haven't created any classes yet. Create one to get an invite code!
+            </div>
+          ) : (
+            classes.map(c => (
+              <div key={c.id} style={{ border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', minWidth: '250px' }}>
+                <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>{c.name}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    Invite Code:{' '}
+                    <code style={{ background: 'var(--bg-primary)', padding: '4px 8px', borderRadius: '4px', fontWeight: 600, color: 'var(--accent-primary)', fontSize: '16px' }}>
+                      {c.invite_code}
+                    </code>
+                  </div>
+                  <button 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      const link = `${window.location.origin}/join/${c.invite_code}`;
+                      navigator.clipboard.writeText(link);
+                      alert('Invite link copied to clipboard!');
+                    }}
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       {/* Search & Student Directory */}
       <div className="teacher-students-card">

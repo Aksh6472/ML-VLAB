@@ -8,6 +8,7 @@ import { quizzesRouter } from './routes/quizzes.js';
 import { notesRouter } from './routes/notes.js';
 import { bookmarksRouter } from './routes/bookmarks.js';
 import { teacherRouter } from './routes/teacher.js';
+import { classesRouter } from './routes/classes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/quizzes', quizzesRouter);
 app.use('/api/notes', notesRouter);
 app.use('/api/bookmarks', bookmarksRouter);
 app.use('/api/teacher', teacherRouter);
+app.use('/api/classes', classesRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

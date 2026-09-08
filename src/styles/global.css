@@ -368,6 +368,10 @@ button:focus-visible {
   50%      { opacity: 0.5; }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .animate-fade-in {
   animation: fadeIn var(--duration-normal) var(--ease-out) both;
 }

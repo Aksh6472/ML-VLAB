@@ -15,7 +15,7 @@ export const exp04 = {
       title: '5.1 Introduction to Logistic Regression',
       type: 'text',
       visualizationId: 'logistic-regression',
-      content: 'While linear regression predicts a continuous output, logistic regression predicts the probability that a given instance belongs to a specific category (binary outcome: 0 or 1).',
+      content: 'While **linear regression** predicts a **continuous output**, **logistic regression** predicts the **probability** that a given instance belongs to a specific category (**binary outcome**: 0 or 1).',
       formulas: [
         {
           name: 'Sigmoid Function',

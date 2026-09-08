@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useProgress } from '../../context/ProgressContext';
@@ -6,8 +6,23 @@ import { experiments } from '../../data/experiments';
 import './StudentDashboard.css';
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { progress, getCompletionPercent, getOverallPercent } = useProgress();
+
+  const [classes, setClasses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (token) {
+      fetch('/api/classes', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setClasses(data);
+      })
+      .catch(console.error);
+    }
+  }, [token]);
 
   const overallPercent = getOverallPercent();
 
@@ -46,11 +61,24 @@ export default function StudentDashboard() {
 
   const notStartedCount = 10 - completedCount - inProgressCount;
 
-  // Calculate quiz averages
-  const allQuizzes = Object.values(progress.quizResults);
-  const avgQuizScore = allQuizzes.length > 0
-    ? Math.round(allQuizzes.reduce((acc, q) => acc + (q.score / (q.total || 1)) * 100, 0) / allQuizzes.length)
-    : 0;
+  // Calculate quiz averages (pre-test and post-test separately)
+  const allQuizEntries = Object.entries(progress.quizResults);
+  const pretestQuizzes = allQuizEntries.filter(([key]) => key.endsWith('-pretest')).map(([, v]) => v);
+  const posttestQuizzes = allQuizEntries.filter(([key]) => key.endsWith('-posttest')).map(([, v]) => v);
+
+  const avgPretestScore = pretestQuizzes.length > 0
+    ? (pretestQuizzes.reduce((acc, q) => acc + q.score, 0) / pretestQuizzes.length).toFixed(1)
+    : null;
+  const avgPretestTotal = pretestQuizzes.length > 0
+    ? (pretestQuizzes.reduce((acc, q) => acc + (q.total || 5), 0) / pretestQuizzes.length).toFixed(1)
+    : null;
+
+  const avgPosttestScore = posttestQuizzes.length > 0
+    ? (posttestQuizzes.reduce((acc, q) => acc + q.score, 0) / posttestQuizzes.length).toFixed(1)
+    : null;
+  const avgPosttestTotal = posttestQuizzes.length > 0
+    ? (posttestQuizzes.reduce((acc, q) => acc + (q.total || 10), 0) / posttestQuizzes.length).toFixed(1)
+    : null;
 
   const notesList = Object.entries(progress.notes).filter(([_, text]) => text && text.trim().length > 0);
 
@@ -65,14 +93,14 @@ export default function StudentDashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <Link to="/join/new" className="btn btn-secondary"> {/* Join Class Link */}
+            ➕ Join Virtual Lab
+          </Link>
           <Link to="/learning-path" className="btn btn-secondary">
             🗺 Learning Path
           </Link>
           <Link to="/experiments" className="btn btn-primary">
             Resume Learning
-          </Link>
-          <Link to="/student/profile" className="btn btn-secondary">
-            View Profile
           </Link>
         </div>
       </div>
@@ -81,7 +109,7 @@ export default function StudentDashboard() {
       <div className="dash-metrics-grid">
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-label">Overall Completion</span>
+            <span className="dash-metric-label">Overall Progress</span>
             <span className="dash-metric-icon">📊</span>
           </div>
           <div className="dash-metric-val">{overallPercent}%</div>
@@ -90,31 +118,58 @@ export default function StudentDashboard() {
 
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-label">Completed</span>
+            <span className="dash-metric-label">Experiments Completed</span>
             <span className="dash-metric-icon">✅</span>
           </div>
           <div className="dash-metric-val" style={{ color: 'var(--success, #38a169)' }}>{completedCount} / 10</div>
-          <div className="dash-metric-sub">Fully finished modules</div>
+          <div className="dash-metric-sub">{inProgressCount} in progress · {notStartedCount} not started</div>
         </div>
 
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-label">In Progress</span>
-            <span className="dash-metric-icon">⏳</span>
+            <span className="dash-metric-label">Avg Pre-Test Score</span>
+            <span className="dash-metric-icon">📝</span>
           </div>
-          <div className="dash-metric-val" style={{ color: 'var(--warning, #dd6b20)' }}>{inProgressCount}</div>
-          <div className="dash-metric-sub">{notStartedCount} experiments not started</div>
+          <div className="dash-metric-val" style={{ color: avgPretestScore ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+            {avgPretestScore ? `${avgPretestScore} / ${avgPretestTotal}` : '—'}
+          </div>
+          <div className="dash-metric-sub">
+            {pretestQuizzes.length > 0 ? `${pretestQuizzes.length} pre-test${pretestQuizzes.length !== 1 ? 's' : ''} taken` : 'No pre-tests taken yet'}
+          </div>
         </div>
 
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-label">Avg Quiz Score</span>
-            <span className="dash-metric-icon">🎯</span>
+            <span className="dash-metric-label">Avg Post-Test Score</span>
+            <span className="dash-metric-icon">🏆</span>
           </div>
-          <div className="dash-metric-val">{allQuizzes.length > 0 ? `${avgQuizScore}%` : 'N/A'}</div>
-          <div className="dash-metric-sub">{allQuizzes.length} quiz attempts recorded</div>
+          <div className="dash-metric-val" style={{ color: avgPosttestScore ? 'var(--success, #38a169)' : 'var(--text-tertiary)' }}>
+            {avgPosttestScore ? `${avgPosttestScore} / ${avgPosttestTotal}` : '—'}
+          </div>
+          <div className="dash-metric-sub">
+            {posttestQuizzes.length > 0 ? `${posttestQuizzes.length} post-test${posttestQuizzes.length !== 1 ? 's' : ''} taken` : 'No post-tests taken yet'}
+          </div>
         </div>
       </div>
+
+      {classes.length > 0 && (
+        <div className="dash-experiments-table-card" style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{ padding: 'var(--space-5)', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>My Virtual Labs (Classes)</h2>
+          </div>
+          <div style={{ padding: 'var(--space-5)', display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            {classes.map(c => (
+              <div key={c.id} style={{ border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', width: '300px' }}>
+                <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>{c.name}</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>{c.description}</p>
+                <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  Instructor: <strong>{c.teacher_name}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Experiments Detailed Table */}
       <div className="dash-experiments-table-card">

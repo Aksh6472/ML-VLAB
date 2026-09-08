@@ -14,14 +14,14 @@ export const exp02 = {
       id: 'intro',
       title: '3.1 Introduction to Linear Regression',
       type: 'text',
-      content: 'Linear regression is a linear approach to modelling the relationship between a scalar response and one or more explanatory variables (also known as dependent and independent variables).',
+      content: '**Linear Regression** is a **linear approach** to modelling the relationship between a **scalar response** and one or more **explanatory variables** (also known as **dependent** and **independent variables**).',
     },
     {
       id: 'math',
       title: '3.2 Mathematical Formulation',
       type: 'text',
       visualizationId: 'linear-regression',
-      content: 'The model assumes a linear relationship:',
+      content: 'The model assumes a **linear relationship**:',
       formulas: [
         {
           name: 'Simple Linear Regression',

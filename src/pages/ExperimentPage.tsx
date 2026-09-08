@@ -1,6 +1,6 @@
 // src/pages/ExperimentPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { experiments, getExperiment, normalizeExpId } from '../data/experiments';
 import { getExperimentContent } from '../data';
 import { useProgress } from '../context/ProgressContext';
@@ -46,36 +46,45 @@ const renderVisualization = (vizId: string) => {
   }
 };
 
+
+const parseBoldText = (text: string | React.ReactNode) => {
+  if (typeof text !== 'string') return text;
+  const parts = text.split(/(\**.*?\**)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="highlight-keyword">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+
 export default function ExperimentPage() {
-  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { id, section } = useParams<{ id: string, section?: string }>();
   const normalizedId = normalizeExpId(id || '1');
   const expMeta = getExperiment(normalizedId);
   const content = getExperimentContent(normalizedId);
   const { getExperimentProgress, markSectionComplete, setLastVisited, saveProcedureStep, getProcedureSteps } = useProgress();
 
-  const [activeSection, setActiveSection] = useState<SectionKey>('aim');
+  const activeSection = (section as SectionKey) || 'aim';
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const progress = getExperimentProgress(normalizedId);
   const nextExp = experiments.find(e => e.number === (expMeta?.number || 0) + 1);
 
-  // Reset scroll and active section on experiment ID change
   useEffect(() => {
-    setActiveSection('aim');
     window.scrollTo(0, 0);
-  }, [normalizedId]);
+  }, [normalizedId, section]);
+  
+  if (!section && expMeta) {
+    return <Navigate to={`/experiment/${normalizedId}/aim`} replace />;
+  }
 
   useEffect(() => {
     if (normalizedId) setLastVisited(normalizedId, activeSection);
   }, [normalizedId, activeSection, setLastVisited]);
 
-  const scrollToSection = useCallback((key: SectionKey) => {
-    setActiveSection(key);
-    const el = sectionRefs.current[key];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
+
 
   const handleMarkComplete = useCallback((section: SectionKey) => {
     markSectionComplete(normalizedId, section);
@@ -155,16 +164,16 @@ export default function ExperimentPage() {
             const isComplete = progress[s.key];
             return (
               <li key={s.key} className="exp-sidebar-item">
-                <button
+                <Link
+                  to={`/experiment/${normalizedId}/${s.key}`}
                   className={`exp-sidebar-link${isActive ? ' exp-sidebar-link--active' : ''}${isComplete ? ' exp-sidebar-link--completed' : ''}`}
-                  onClick={() => scrollToSection(s.key)}
                   aria-current={isActive ? 'step' : undefined}
                 >
                   <span className="exp-sidebar-step-num">
                     {isComplete ? '✓' : s.number}
                   </span>
                   {s.label}
-                </button>
+                </Link>
               </li>
             );
           })}
@@ -191,6 +200,7 @@ export default function ExperimentPage() {
           </div>
 
           {/* ═══ AIM ═══ */}
+          {activeSection === "aim" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.aim = el; }}
@@ -208,11 +218,11 @@ export default function ExperimentPage() {
               )}
             </div>
             <div className="exp-aim-card">
-              <p className="exp-aim-text">{content.aim}</p>
+              <p className="exp-aim-text">{parseBoldText(content.aim)}</p>
               <div className="exp-aim-objectives">
                 <h4>Learning Objectives</h4>
                 <ul>
-                  {content.learningObjectives.map((obj, i) => (
+                  {content.learningObjectives.map((obj: string, i: number) => (
                     <li key={i}>{obj}</li>
                   ))}
                 </ul>
@@ -225,7 +235,10 @@ export default function ExperimentPage() {
             </div>
           </section>
 
+          )}
+
           {/* ═══ THEORY ═══ */}
+          {activeSection === "theory" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.theory = el; }}
@@ -243,21 +256,21 @@ export default function ExperimentPage() {
               )}
             </div>
 
-            {content.theory.map(section => (
+            {content.theory.map((section: any) => (
               <div key={section.id} className="exp-theory-section">
                 <h3>{section.title}</h3>
 
-                {section.content && <p>{section.content}</p>}
+                {section.content && <p>{parseBoldText(section.content)}</p>}
 
                 {/* Definition list items */}
-                {section.type === 'list' && section.intro && <p>{section.intro}</p>}
+                {section.type === 'list' && section.intro && <p>{parseBoldText(section.intro)}</p>}
                 {section.items && (
                   <ul className="exp-theory-list">
                     {section.items.map((item: any, i: number) => (
                       <li key={i}>
                         {item.term && <strong>{item.term}</strong>}
                         {item.term && ' – '}
-                        {item.description}
+                        {parseBoldText(item.description)}
                       </li>
                     ))}
                   </ul>
@@ -268,7 +281,7 @@ export default function ExperimentPage() {
                   <ul className="exp-theory-list">
                     {section.subsections.map((sub: any, i: number) => (
                       <li key={i}>
-                        <strong>{sub.term}</strong> – {sub.description}
+                        <strong>{sub.term}</strong> – {parseBoldText(sub.description)}
                       </li>
                     ))}
                   </ul>
@@ -297,7 +310,7 @@ export default function ExperimentPage() {
                 {/* Note callout */}
                 {section.note && (
                   <div className="exp-theory-note">
-                    <strong>Note:</strong> {section.note}
+                    <strong>Note:</strong> {parseBoldText(section.note)}
                   </div>
                 )}
 
@@ -342,7 +355,10 @@ export default function ExperimentPage() {
             ))}
           </section>
 
+          )}
+
           {/* ═══ PRETEST ═══ */}
+          {activeSection === "pretest" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.pretest = el; }}
@@ -365,7 +381,10 @@ export default function ExperimentPage() {
             />
           </section>
 
+          )}
+
           {/* ═══ PROCEDURE ═══ */}
+          {activeSection === "procedure" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.procedure = el; }}
@@ -397,7 +416,7 @@ export default function ExperimentPage() {
             </div>
 
             <div className="exp-procedure-steps">
-              {content.procedure.steps.map((step, i) => {
+              {content.procedure.steps.map((step: any, i: number) => {
                 const isComplete = procedureSteps[i];
                 return (
                   <div key={i} className={`exp-procedure-step${isComplete ? ' exp-procedure-step--complete' : ''}`}>
@@ -437,7 +456,10 @@ export default function ExperimentPage() {
             </div>
           </section>
 
+          )}
+
           {/* ═══ RESULTS ═══ */}
+          {activeSection === "results" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.results = el; }}
@@ -458,7 +480,7 @@ export default function ExperimentPage() {
             <p style={{ marginBottom: 'var(--space-4)' }}>After completing the experiment, students should observe the following:</p>
 
             <ul className="exp-results-observations">
-              {content.results.observations.map((obs, i) => (
+              {content.results.observations.map((obs: string, i: number) => (
                 <li key={i}>{obs}</li>
               ))}
             </ul>
@@ -469,7 +491,10 @@ export default function ExperimentPage() {
             </div>
           </section>
 
+          )}
+
           {/* ═══ POSTTEST ═══ */}
+          {activeSection === "posttest" && (
           <section
             className="exp-section"
             ref={el => { sectionRefs.current.posttest = el; }}
@@ -491,6 +516,8 @@ export default function ExperimentPage() {
               onComplete={() => handleMarkComplete('posttest')}
             />
           </section>
+
+          )}
 
           {/* ─── Next Experiment ─── */}
           {nextExp && (

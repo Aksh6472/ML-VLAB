@@ -163,16 +163,94 @@
 }
 
 .header-user-avatar {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), #805ad5);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
+  flex-shrink: 0;
+}
+
+.header-user-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* User dropdown */
+.header-user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  overflow: hidden;
+  animation: dropdown-in 0.15s ease;
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.header-user-dropdown-info {
+  padding: var(--space-4);
+}
+
+.header-user-role-badge {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.header-user-dropdown-divider {
+  height: 1px;
+  background: var(--border-primary);
+}
+
+.header-user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 10px var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.header-user-dropdown-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.header-user-logout {
+  color: var(--error, #e53e3e);
+}
+
+.header-user-logout:hover {
+  background: rgba(229, 62, 62, 0.08);
+  color: var(--error, #e53e3e);
 }
 
 @media (max-width: 1024px) {
@@ -191,7 +269,7 @@
   .header-progress-badge span {
     display: none;
   }
-  .header-user-btn span.name {
+  .header-user-name {
     display: none;
   }
 }
