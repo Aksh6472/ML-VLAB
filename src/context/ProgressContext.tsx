@@ -220,19 +220,21 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, [getCompletionPercent]);
 
   const isExperimentUnlocked = useCallback((experimentId: string): boolean => {
+    if (user?.role === 'teacher') return true;
     const num = parseInt(experimentId, 10);
     if (isNaN(num) || num <= 1) return true;
     return isExperimentCompleted(String(num - 1));
-  }, [isExperimentCompleted]);
+  }, [user?.role, isExperimentCompleted]);
 
   const isFinalTestUnlocked = useCallback((): boolean => {
+    if (user?.role === 'teacher') return true;
     for (let i = 1; i <= 10; i++) {
       if (!isExperimentCompleted(String(i))) {
         return false;
       }
     }
     return true;
-  }, [isExperimentCompleted]);
+  }, [user?.role, isExperimentCompleted]);
 
   const setLastVisited = useCallback((experimentId: string, section: string) => {
     setProgress(prev => ({
