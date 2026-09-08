@@ -139,7 +139,7 @@ export default function Header() {
                 <>
                   {/* Backdrop to close on click-away */}
                   <div
-                    style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                    style={{ position: 'fixed', inset: 0, zIndex: 999 }}
                     onClick={() => setShowUserMenu(false)}
                   />
                   <div className="header-user-dropdown">
