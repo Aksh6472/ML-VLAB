@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import srmLogo from '../../assets/srm-logo.png';
 import './Auth.css';
 
 export default function Login() {
@@ -32,13 +33,7 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      // Navigate immediately using the user data returned by login
-      // (don't wait for the useEffect — this is faster and avoids a flash)
       const from = (location.state as any)?.from?.pathname;
-      // We can't read `user` immediately since setState is async,
-      // but the /api/auth/login response includes the role.
-      // The AuthContext login() call already stored it; the useEffect will fire.
-      // As a belt-and-suspenders measure, determine destination from selected tab role:
       const dest = from || (role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
       navigate(dest, { replace: true });
     } else {
@@ -62,7 +57,8 @@ export default function Login() {
     <div className="auth-container">
       <div className="auth-card animate-fade-in-up">
         <div className="auth-header">
-          <div className="auth-badge">SRM Virtual Laboratory</div>
+          <img src={srmLogo} alt="SRM Logo" className="auth-logo" style={{ height: '48px', width: 'auto', marginBottom: 'var(--space-3)' }} />
+          <div className="auth-badge">SRM VIRTUAL LABORATORY</div>
           <h1 className="auth-title">Welcome Back</h1>
           <p className="auth-subtitle">Sign in to access your experiment records, quizzes, and learning dashboard.</p>
         </div>

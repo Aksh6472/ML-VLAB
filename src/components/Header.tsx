@@ -1,6 +1,5 @@
-// src/components/Header.tsx
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
@@ -40,6 +39,13 @@ function MoonIcon() {
 }
 
 export default function Header() {
+  const location = useLocation();
+
+  // Hide header completely on standalone authentication routes (/login and /register)
+  if (location.pathname === '/login' || location.pathname === '/register') {
+    return null;
+  }
+
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
   const { getOverallPercent } = useProgress();
