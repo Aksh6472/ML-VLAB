@@ -14,7 +14,7 @@ export const exp03 = {
       id: 'intro',
       title: '4.1 Why Cross-Validation?',
       type: 'text',
-      content: 'A single **train-test split** might result in a **test set** that is particularly easy or difficult, leading to a **biased performance estimate**. **Cross-Validation** mitigates this by training and evaluating the model multiple times on different **partitions** of the data.',
+      content: 'A single **train-test split** might produce a test set that is unrepresentative, leading to a biased error estimate. **Cross-Validation** mitigates this by partitioning the dataset into multiple **folds** to evaluate performance consistently.',
       codeExample: {
         title: 'K-Fold Cross-Validation',
         code: `from sklearn.model_selection import cross_val_score, KFold

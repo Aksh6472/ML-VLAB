@@ -183,19 +183,27 @@
   white-space: nowrap;
 }
 
-/* User dropdown */
+/* User dropdown - SOLID opaque background (no transparency, no glass filter) */
 .header-user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   min-width: 240px;
-  background: var(--bg-secondary);
+  background-color: #ffffff !important;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl), 0 10px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   z-index: 1000;
   overflow: hidden;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   animation: dropdown-in 0.15s ease;
+}
+
+[data-theme="dark"] .header-user-dropdown {
+  background-color: #181b22 !important;
+  border-color: #2d3240;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes dropdown-in {

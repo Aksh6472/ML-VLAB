@@ -15,7 +15,7 @@ export const exp05 = {
       title: '6.1 Introduction to PCA',
       type: 'text',
       visualizationId: 'pca',
-      content: '**High-dimensional data** can be difficult to visualize and computationally expensive to process. **PCA (Principal Component Analysis)** is an **unsupervised technique** that finds the directions of **maximum variance** (**principal components**) and projects the data onto them.',
+      content: 'High-dimensional datasets can be computationally expensive and difficult to analyze. **Principal Component Analysis (PCA)** is an **unsupervised dimensionality reduction** technique that transforms correlated features into uncorrelated **principal components** maximizing **variance**.',
       codeExample: {
         title: 'Applying PCA',
         code: `from sklearn.decomposition import PCA

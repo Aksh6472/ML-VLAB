@@ -15,7 +15,7 @@ export const exp10 = {
       title: '11.1 Introduction to Perceptron',
       type: 'text',
       visualizationId: 'perceptron',
-      content: '**Artificial Neural Networks** are loosely inspired by the human brain. A **perceptron** is the simplest type of **artificial neuron**. It takes **multiple inputs**, multiplies them by **weights**, adds a **bias**, and passes the sum through an **activation function** to produce an **output**.',
+      content: 'A **Perceptron** is the foundational building block of an **Artificial Neural Network**. It computes a weighted linear combination of inputs plus a **bias** term, passing the result through a step **activation function**.',
       formulas: [
         {
           name: 'Perceptron Output',
