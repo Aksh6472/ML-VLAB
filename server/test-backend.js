@@ -153,6 +153,39 @@ async function runTests() {
     studentDetail.experiments[0].sections.aim === true
       ? '✅ PASS' : '❌ FAIL');
 
+  // 11. Create class and Join class test
+  const createClassRes = await fetch(`${baseUrl}/classes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${teacherToken}` },
+    body: JSON.stringify({ name: 'ML Test Class', description: 'Integration test class' })
+  });
+  const createdClass = await createClassRes.json();
+  console.log('11a. Teacher create class with invite code:', createClassRes.ok && createdClass.invite_code ? '✅ PASS' : '❌ FAIL', `Code: ${createdClass.invite_code}`);
+
+  const joinRes = await fetch(`${baseUrl}/classes/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+    body: JSON.stringify({ inviteCode: createdClass.invite_code })
+  });
+  const joinData = await joinRes.json();
+  console.log('11b. Student A join class with code:', joinRes.ok && joinData.message ? '✅ PASS' : '❌ FAIL', joinData);
+
+  const duplicateJoinRes = await fetch(`${baseUrl}/classes/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+    body: JSON.stringify({ inviteCode: createdClass.invite_code })
+  });
+  const duplicateData = await duplicateJoinRes.json();
+  console.log('11c. Duplicate join returns exact error message:', duplicateJoinRes.status === 400 && duplicateData.error === 'You are already a member of this Virtual Lab.' ? '✅ PASS' : '❌ FAIL', duplicateData);
+
+  const invalidJoinRes = await fetch(`${baseUrl}/classes/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+    body: JSON.stringify({ inviteCode: 'INVALID99' })
+  });
+  const invalidData = await invalidJoinRes.json();
+  console.log('11d. Invalid invite code returns exact error message:', invalidJoinRes.status === 404 && invalidData.error === 'Invalid invite code.' ? '✅ PASS' : '❌ FAIL', invalidData);
+
   console.log('\n=== ALL INTEGRATION TESTS COMPLETED SUCCESSFULLY ===');
 }
 

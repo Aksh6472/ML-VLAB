@@ -13,12 +13,20 @@
   margin-bottom: var(--space-8);
   flex-wrap: wrap;
   gap: var(--space-4);
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-primary, #e2e8f0);
-  border-left: 4px solid var(--accent-primary, #3182ce);
-  border-radius: var(--radius-xl, 14px);
-  padding: var(--space-6, 24px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-left: 4px solid var(--accent-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+
+[data-theme="dark"] .dash-header {
+  background: #141722;
+  border-color: #242838;
+  border-left-color: #4a90e2;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .dash-welcome-label {

@@ -59,22 +59,24 @@ router.post('/', requireTeacher, (req: AuthenticatedRequest, res: Response) => {
 // Join a class (Student only)
 router.post('/join', requireStudent, (req: AuthenticatedRequest, res: Response) => {
   const { inviteCode } = req.body;
-  if (!inviteCode) {
-    res.status(400).json({ error: 'Invite code is required' });
+  if (!inviteCode || typeof inviteCode !== 'string' || !inviteCode.trim()) {
+    res.status(400).json({ error: 'Invite code is required.' });
     return;
   }
 
+  const cleanCode = inviteCode.trim();
+
   try {
-    const lab = db.prepare('SELECT id FROM virtual_labs WHERE invite_code = ?').get(inviteCode);
+    const lab = db.prepare('SELECT id, name FROM virtual_labs WHERE UPPER(invite_code) = UPPER(?)').get(cleanCode) as { id: number; name: string } | undefined;
     if (!lab) {
-      res.status(404).json({ error: 'Invalid invite code' });
+      res.status(404).json({ error: 'Invalid invite code.' });
       return;
     }
 
     // Check if already joined
     const existing = db.prepare('SELECT id FROM virtual_lab_members WHERE lab_id = ? AND student_id = ?').get(lab.id, req.user!.id);
     if (existing) {
-      res.status(400).json({ error: 'You have already joined this class' });
+      res.status(400).json({ error: 'You are already a member of this Virtual Lab.' });
       return;
     }
 
@@ -84,10 +86,10 @@ router.post('/join', requireStudent, (req: AuthenticatedRequest, res: Response) 
       VALUES (?, ?, ?)
     `).run(lab.id, req.user!.id, now);
 
-    res.json({ message: 'Successfully joined class', labId: lab.id });
+    res.json({ message: 'Successfully joined class', labId: lab.id, labName: lab.name });
   } catch (error) {
     console.error('Error joining class:', error);
-    res.status(500).json({ error: 'Failed to join class' });
+    res.status(500).json({ error: 'Failed to join class.' });
   }
 });
 

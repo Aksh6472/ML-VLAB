@@ -6,12 +6,17 @@
 }
 
 .final-test-header {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl, 16px);
   padding: var(--space-6, 24px);
   margin-bottom: var(--space-6, 24px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .final-test-header {
+  background: #141722;
+  border-color: #242838;
 }
 
 .final-test-badge {
@@ -28,12 +33,17 @@
 }
 
 .final-test-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl, 16px);
   padding: var(--space-8, 32px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   margin-bottom: var(--space-6, 24px);
+}
+
+[data-theme="dark"] .final-test-card {
+  background: #141722;
+  border-color: #242838;
 }
 
 .final-test-progress-bar {

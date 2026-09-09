@@ -16,3 +16,7 @@ raw_request.txt
 
 # Added by ggshield
 .cache_ggshield
+
+# Playwright
+test-results/
+playwright-report/

@@ -59,9 +59,22 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <ProgressProvider>
-            <Header />
-            <ErrorBoundary>
-              <Suspense fallback={<LoadingFallback />}>
+            {/* Background Layer exclusively for Light Theme */}
+            <div 
+              className="fixed inset-0 w-full h-screen pointer-events-none z-0 bg-cover bg-center bg-no-repeat block dark:hidden opacity-80 light-theme-bg-layer"
+              style={{ backgroundImage: "url('/light.png')" }}
+              aria-hidden="true"
+            />
+            {/* Background Layer exclusively for Dark Theme */}
+            <div 
+              className="fixed inset-0 w-full h-screen pointer-events-none z-0 bg-cover bg-center bg-no-repeat hidden dark:block opacity-75 dark-theme-bg-layer"
+              style={{ backgroundImage: "url('/dark.jpg')" }}
+              aria-hidden="true"
+            />
+            <div className="relative z-10" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+              <Header />
+              <ErrorBoundary>
+                <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Root — public Home / Welcome page */}
                   <Route path="/" element={<Home />} />
@@ -171,9 +184,10 @@ export default function App() {
                 </Routes>
               </Suspense>
             </ErrorBoundary>
-          </ProgressProvider>
-        </AuthProvider>
-      </ThemeProvider>
+          </div>
+        </ProgressProvider>
+      </AuthProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   );
 }

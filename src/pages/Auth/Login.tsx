@@ -15,13 +15,12 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If already authenticated, redirect immediately to student/teacher dashboard
+  // If already authenticated, redirect immediately to home
   React.useEffect(() => {
     if (isAuthenticated && user) {
       const from = (location.state as any)?.from?.pathname;
       const isValidSubRoute = from && !['/', '/login', '/register', '/home'].includes(from);
-      const defaultDest = user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
-      navigate(isValidSubRoute ? from : defaultDest, { replace: true });
+      navigate(isValidSubRoute ? from : '/', { replace: true });
     }
   }, [isAuthenticated, user, navigate, location]);
 
@@ -36,7 +35,7 @@ export default function Login() {
     if (result.success) {
       const from = (location.state as any)?.from?.pathname;
       const isValidSubRoute = from && !['/', '/login', '/register', '/home'].includes(from);
-      const dest = isValidSubRoute ? from : (role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
+      const dest = isValidSubRoute ? from : '/';
       navigate(dest, { replace: true });
     } else {
       setError(result.error || 'Failed to sign in. Please verify your credentials.');

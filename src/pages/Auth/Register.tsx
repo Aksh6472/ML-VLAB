@@ -17,7 +17,7 @@ export default function Register() {
 
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      navigate('/student/dashboard', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -46,7 +46,7 @@ export default function Register() {
     setLoading(false);
 
     if (result.success) {
-      navigate('/student/dashboard', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setError(result.error || 'Registration failed. Please check your information.');
     }

@@ -3,7 +3,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { experiments } from '../data/experiments';
 import { useProgress } from '../context/ProgressContext';
-import './Home.css'; // reuse home experiment card styles
+import './Home.css';
+import './ExperimentsIndex.css';
 
 export default function ExperimentsIndex() {
   const { getCompletionPercent, isExperimentUnlocked, isFinalTestUnlocked } = useProgress();

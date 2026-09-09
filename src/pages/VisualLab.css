@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: calc(var(--header-height) + 40px) var(--space-6) var(--space-16);
-  background: radial-gradient(circle at 50% 35%, rgba(74, 144, 226, 0.15), rgba(15, 23, 42, 0.02) 65%), var(--bg-primary);
+  background: transparent;
   overflow: hidden;
 }
 
