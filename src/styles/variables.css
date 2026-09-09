@@ -193,10 +193,10 @@
   --bg-card: rgba(20, 23, 34, 0.78);
   --bg-surface: rgba(24, 27, 34, 0.82);
 
-  --text-primary: #e4e6eb;
-  --text-secondary: #a8adb7;
-  --text-tertiary: #7d8290;
-  --text-muted: #5a5f6b;
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-tertiary: #cbd5e1;
+  --text-muted: #94a3b8;
   --text-inverse: #0f1117;
 
   --border-primary: #2d3240;
