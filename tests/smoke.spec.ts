@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Smoke Test', () => {
   test('should load application successfully and render visible content', async ({ page }) => {
     // 1. Opens http://localhost:5173
-    const response = await page.goto('/');
+    const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // 2. Verifies the page loads successfully
     expect(response?.status()).toBe(200);
