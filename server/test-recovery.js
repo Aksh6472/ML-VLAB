@@ -11,19 +11,19 @@ async function runRecoveryTests() {
   const newPassword = 'NewSecret#Password2026';
 
   // 0. Setup test user
-  db.prepare('DELETE FROM users WHERE email = ?').run(testEmail);
-  db.prepare('DELETE FROM password_resets WHERE email = ?').run(testEmail);
+  await db.prepare('DELETE FROM users WHERE email = ?').run(testEmail);
+  await db.prepare('DELETE FROM password_resets WHERE email = ?').run(testEmail);
 
   const initialHash = await bcrypt.hash(initialPassword, 10);
   const nowIso = new Date().toISOString();
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run('REC-101', 'Recovery Tester', testEmail, initialHash, 'student', nowIso, nowIso);
 
   // 1. Anti-enumeration check (Unregistered email)
   const nonExistentEmail = 'nobody.exists@srmist.edu.in';
-  const userCheck = db.prepare('SELECT id FROM users WHERE email = ?').get(nonExistentEmail);
+  const userCheck = await db.prepare('SELECT id FROM users WHERE email = ?').get(nonExistentEmail);
   if (!userCheck) {
     console.log('✅ 1. Anti-enumeration: Verified user does not exist in DB');
   }
@@ -33,12 +33,12 @@ async function runRecoveryTests() {
   const codeHash = crypto.createHash('sha256').update(otpCode).digest('hex');
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO password_resets (email, code_hash, attempts, expires_at, used_at, created_at)
     VALUES (?, ?, 0, ?, NULL, ?)
   `).run(testEmail, codeHash, expiresAt, nowIso);
 
-  const storedToken = db.prepare('SELECT * FROM password_resets WHERE email = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(testEmail);
+  const storedToken = await db.prepare('SELECT * FROM password_resets WHERE email = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(testEmail);
   if (storedToken && storedToken.code_hash === codeHash && storedToken.code_hash !== otpCode) {
     console.log('✅ 2. Secure Token Storage: Code stored as SHA-256 hash, raw code is never stored in plaintext');
   }
@@ -52,8 +52,8 @@ async function runRecoveryTests() {
   }
 
   // 4. Test Brute-Force lockout
-  db.prepare('UPDATE password_resets SET attempts = 5 WHERE id = ?').run(storedToken.id);
-  const lockedRecord = db.prepare('SELECT attempts FROM password_resets WHERE id = ?').get(storedToken.id);
+  await db.prepare('UPDATE password_resets SET attempts = 5 WHERE id = ?').run(storedToken.id);
+  const lockedRecord = await db.prepare('SELECT attempts FROM password_resets WHERE id = ?').get(storedToken.id);
   if (lockedRecord.attempts >= 5) {
     console.log('✅ 4. Brute-Force Lockout: Token locked after 5 failed attempts');
   }
@@ -61,18 +61,18 @@ async function runRecoveryTests() {
   // 5. Valid Reset with new password
   const freshOtp = '765432';
   const freshHash = crypto.createHash('sha256').update(freshOtp).digest('hex');
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO password_resets (email, code_hash, attempts, expires_at, used_at, created_at)
     VALUES (?, ?, 0, ?, NULL, ?)
   `).run(testEmail, freshHash, expiresAt, nowIso);
 
   // Update password
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
-  db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(newPasswordHash, testEmail);
-  db.prepare('UPDATE password_resets SET used_at = ? WHERE email = ? AND used_at IS NULL').run(new Date().toISOString(), testEmail);
+  await db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(newPasswordHash, testEmail);
+  await db.prepare('UPDATE password_resets SET used_at = ? WHERE email = ? AND used_at IS NULL').run(new Date().toISOString(), testEmail);
 
   // 6. Verify credentials
-  const updatedUser = db.prepare('SELECT * FROM users WHERE email = ?').get(testEmail);
+  const updatedUser = await db.prepare('SELECT * FROM users WHERE email = ?').get(testEmail);
   const oldPassWorks = await bcrypt.compare(initialPassword, updatedUser.password_hash);
   const newPassWorks = await bcrypt.compare(newPassword, updatedUser.password_hash);
 
@@ -81,8 +81,8 @@ async function runRecoveryTests() {
   }
 
   // Clean up
-  db.prepare('DELETE FROM users WHERE email = ?').run(testEmail);
-  db.prepare('DELETE FROM password_resets WHERE email = ?').run(testEmail);
+  await db.prepare('DELETE FROM users WHERE email = ?').run(testEmail);
+  await db.prepare('DELETE FROM password_resets WHERE email = ?').run(testEmail);
   console.log('🎉 All 5 recovery tests passed cleanly!');
 }
 

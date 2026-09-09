@@ -6,16 +6,16 @@ import crypto from 'crypto';
 const router = Router();
 
 // Get all classes for the logged in user
-router.get('/', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const user = req.user!;
   
   try {
     if (user.role === 'teacher') {
-      const labs = db.prepare('SELECT * FROM virtual_labs WHERE teacher_id = ? ORDER BY created_at DESC').all(user.id);
+      const labs = await db.prepare('SELECT * FROM virtual_labs WHERE teacher_id = ? ORDER BY created_at DESC').all(user.id);
       res.json(labs);
     } else {
       // Student: Get labs they joined
-      const labs = db.prepare(`
+      const labs = await db.prepare(`
         SELECT vl.*, vlm.joined_at, u.name as teacher_name
         FROM virtual_labs vl
         JOIN virtual_lab_members vlm ON vl.id = vlm.lab_id
@@ -32,7 +32,7 @@ router.get('/', requireAuth, (req: AuthenticatedRequest, res: Response) => {
 });
 
 // Create a new class (Teacher only)
-router.post('/', requireTeacher, (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireTeacher, async (req: AuthenticatedRequest, res: Response) => {
   const { name, description } = req.body;
   if (!name) {
     res.status(400).json({ error: 'Class name is required' });
@@ -43,12 +43,12 @@ router.post('/', requireTeacher, (req: AuthenticatedRequest, res: Response) => {
     const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase(); // e.g. "A1B2C3D4"
     const now = new Date().toISOString();
 
-    const { lastInsertRowid } = db.prepare(`
+    const { lastInsertRowid } = await db.prepare(`
       INSERT INTO virtual_labs (teacher_id, name, description, invite_code, created_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(req.user!.id, name, description || '', inviteCode, now);
 
-    const newLab = db.prepare('SELECT * FROM virtual_labs WHERE id = ?').get(lastInsertRowid);
+    const newLab = await db.prepare('SELECT * FROM virtual_labs WHERE id = ?').get(lastInsertRowid);
     res.status(201).json(newLab);
   } catch (error) {
     console.error('Error creating class:', error);
@@ -57,7 +57,7 @@ router.post('/', requireTeacher, (req: AuthenticatedRequest, res: Response) => {
 });
 
 // Join a class (Student only)
-router.post('/join', requireStudent, (req: AuthenticatedRequest, res: Response) => {
+router.post('/join', requireStudent, async (req: AuthenticatedRequest, res: Response) => {
   const { inviteCode } = req.body;
   if (!inviteCode || typeof inviteCode !== 'string' || !inviteCode.trim()) {
     res.status(400).json({ error: 'Invite code is required.' });
@@ -67,21 +67,21 @@ router.post('/join', requireStudent, (req: AuthenticatedRequest, res: Response) 
   const cleanCode = inviteCode.trim();
 
   try {
-    const lab = db.prepare('SELECT id, name FROM virtual_labs WHERE UPPER(invite_code) = UPPER(?)').get(cleanCode) as { id: number; name: string } | undefined;
+    const lab = await db.prepare('SELECT id, name FROM virtual_labs WHERE UPPER(invite_code) = UPPER(?)').get(cleanCode) as { id: number; name: string } | undefined;
     if (!lab) {
       res.status(404).json({ error: 'Invalid invite code.' });
       return;
     }
 
     // Check if already joined
-    const existing = db.prepare('SELECT id FROM virtual_lab_members WHERE lab_id = ? AND student_id = ?').get(lab.id, req.user!.id);
+    const existing = await db.prepare('SELECT id FROM virtual_lab_members WHERE lab_id = ? AND student_id = ?').get(lab.id, req.user!.id);
     if (existing) {
       res.status(400).json({ error: 'You are already a member of this Virtual Lab.' });
       return;
     }
 
     const now = new Date().toISOString();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO virtual_lab_members (lab_id, student_id, joined_at)
       VALUES (?, ?, ?)
     `).run(lab.id, req.user!.id, now);
@@ -94,18 +94,18 @@ router.post('/join', requireStudent, (req: AuthenticatedRequest, res: Response) 
 });
 
 // Get members of a class (Teacher only)
-router.get('/:id/members', requireTeacher, (req: AuthenticatedRequest, res: Response) => {
+router.get('/:id/members', requireTeacher, async (req: AuthenticatedRequest, res: Response) => {
   const labId = req.params.id;
   
   try {
     // Verify ownership
-    const lab = db.prepare('SELECT id FROM virtual_labs WHERE id = ? AND teacher_id = ?').get(labId, req.user!.id);
+    const lab = await db.prepare('SELECT id FROM virtual_labs WHERE id = ? AND teacher_id = ?').get(labId, req.user!.id);
     if (!lab) {
       res.status(404).json({ error: 'Class not found or access denied' });
       return;
     }
 
-    const members = db.prepare(`
+    const members = await db.prepare(`
       SELECT u.id, u.name, u.email, u.student_id, vlm.joined_at
       FROM users u
       JOIN virtual_lab_members vlm ON u.id = vlm.student_id

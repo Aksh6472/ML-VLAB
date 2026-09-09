@@ -5,12 +5,12 @@ import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 export const progressRouter = Router();
 
 // Get full progress state for the authenticated student
-progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+progressRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
 
     // Fetch experiment progress
-    const expRows = db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(userId);
+    const expRows = await db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(userId);
     const experiments: Record<string, any> = {};
     for (const row of expRows) {
       experiments[row.experiment_id] = {
@@ -26,7 +26,7 @@ progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response):
     }
 
     // Fetch procedure steps
-    const stepRows = db.prepare('SELECT experiment_id, step_index, is_completed FROM procedure_steps WHERE user_id = ? ORDER BY step_index ASC').all(userId);
+    const stepRows = await db.prepare('SELECT experiment_id, step_index, is_completed FROM procedure_steps WHERE user_id = ? ORDER BY step_index ASC').all(userId);
     const procedureSteps: Record<string, boolean[]> = {};
     for (const row of stepRows) {
       if (!procedureSteps[row.experiment_id]) {
@@ -36,7 +36,7 @@ progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response):
     }
 
     // Fetch latest quiz results
-    const quizRows = db.prepare('SELECT experiment_id, quiz_type, score, total_questions, answers_json, submitted_at FROM quiz_records WHERE user_id = ? ORDER BY id DESC').all(userId);
+    const quizRows = await db.prepare('SELECT experiment_id, quiz_type, score, total_questions, answers_json, submitted_at FROM quiz_records WHERE user_id = ? ORDER BY id DESC').all(userId);
     const quizResults: Record<string, any> = {};
     for (const row of quizRows) {
       const quizKey = `exp-${row.experiment_id}-${row.quiz_type}`;
@@ -51,7 +51,7 @@ progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response):
     }
 
     // Fetch bookmarks
-    const bookmarkRows = db.prepare('SELECT experiment_id, content_type, title, created_at FROM bookmarks WHERE user_id = ? ORDER BY id DESC').all(userId);
+    const bookmarkRows = await db.prepare('SELECT experiment_id, content_type, title, created_at FROM bookmarks WHERE user_id = ? ORDER BY id DESC').all(userId);
     const bookmarks = bookmarkRows.map(b => ({
       id: b.experiment_id,
       experimentId: b.experiment_id,
@@ -61,7 +61,7 @@ progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response):
     }));
 
     // Fetch notes
-    const noteRows = db.prepare('SELECT experiment_id, content FROM notes WHERE user_id = ?').all(userId);
+    const noteRows = await db.prepare('SELECT experiment_id, content FROM notes WHERE user_id = ?').all(userId);
     const notes: Record<string, string> = {};
     for (const row of noteRows) {
       notes[row.experiment_id] = row.content;
@@ -81,7 +81,7 @@ progressRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response):
 });
 
 // Mark an experiment section complete
-progressRouter.post('/section', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+progressRouter.post('/section', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { experimentId, section } = req.body;
@@ -95,7 +95,7 @@ progressRouter.post('/section', requireAuth, (req: AuthenticatedRequest, res: Re
     const expIdStr = String(experimentId);
     const now = new Date().toISOString();
 
-    const existing = db.prepare('SELECT * FROM experiment_progress WHERE user_id = ? AND experiment_id = ?').get(userId, expIdStr) as any;
+    const existing = await db.prepare('SELECT * FROM experiment_progress WHERE user_id = ? AND experiment_id = ?').get(userId, expIdStr) as any;
 
     if (existing) {
       const updatedValues = {
@@ -112,14 +112,13 @@ progressRouter.post('/section', requireAuth, (req: AuthenticatedRequest, res: Re
 
       const completedAt = allDone ? (existing.completed_at || now) : existing.completed_at;
 
-      db.prepare(`
+      await db.prepare(`
         UPDATE experiment_progress
         SET ${section} = 1, updated_at = ?, completed_at = ?
         WHERE user_id = ? AND experiment_id = ?
       `).run(now, completedAt, userId, expIdStr);
     } else {
-      const isAll = section === 'aim' && false; // Initial creation
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO experiment_progress (user_id, experiment_id, ${section}, started_at, updated_at)
         VALUES (?, ?, 1, ?, ?)
       `).run(userId, expIdStr, now, now);
@@ -133,7 +132,7 @@ progressRouter.post('/section', requireAuth, (req: AuthenticatedRequest, res: Re
 });
 
 // Save procedure step progress
-progressRouter.post('/step', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+progressRouter.post('/step', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { experimentId, stepIndex, isCompleted } = req.body;
@@ -147,13 +146,13 @@ progressRouter.post('/step', requireAuth, (req: AuthenticatedRequest, res: Respo
     const completedVal = isCompleted ? 1 : 0;
     const now = new Date().toISOString();
 
-    const existing = db.prepare('SELECT id FROM procedure_steps WHERE user_id = ? AND experiment_id = ? AND step_index = ?').get(userId, expIdStr, stepIndex);
+    const existing = await db.prepare('SELECT id FROM procedure_steps WHERE user_id = ? AND experiment_id = ? AND step_index = ?').get(userId, expIdStr, stepIndex);
 
     if (existing) {
-      db.prepare('UPDATE procedure_steps SET is_completed = ?, updated_at = ? WHERE user_id = ? AND experiment_id = ? AND step_index = ?')
+      await db.prepare('UPDATE procedure_steps SET is_completed = ?, updated_at = ? WHERE user_id = ? AND experiment_id = ? AND step_index = ?')
         .run(completedVal, now, userId, expIdStr, stepIndex);
     } else {
-      db.prepare('INSERT INTO procedure_steps (user_id, experiment_id, step_index, is_completed, updated_at) VALUES (?, ?, ?, ?, ?)')
+      await db.prepare('INSERT INTO procedure_steps (user_id, experiment_id, step_index, is_completed, updated_at) VALUES (?, ?, ?, ?, ?)')
         .run(userId, expIdStr, stepIndex, completedVal, now);
     }
 

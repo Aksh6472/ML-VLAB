@@ -167,8 +167,7 @@ const FINAL_TEST_QUESTIONS: Question[] = [
   },
   {
     id: 15,
-    expId: '15',
-    expIdReal: '5',
+    expId: '5',
     topicTitle: 'PCA (Dimensionality Reduction)',
     question: 'What is the Explained Variance Ratio in PCA?',
     options: [
@@ -196,8 +195,7 @@ const FINAL_TEST_QUESTIONS: Question[] = [
   },
   {
     id: 17,
-    expId: '7',
-    expIdReal: '6',
+    expId: '6',
     topicTitle: 'Support Vector Machines',
     question: 'What purpose does the Kernel Trick serve in SVMs?',
     options: [
@@ -352,16 +350,9 @@ const FINAL_TEST_QUESTIONS: Question[] = [
   },
 ];
 
-// Clean up any expId overrides
-FINAL_TEST_QUESTIONS.forEach(q => {
-  if ((q as any).expIdReal) {
-    q.expId = (q as any).expIdReal;
-  }
-});
-
 export default function FinalTest() {
   const navigate = useNavigate();
-  const { isFinalTestUnlocked, recordQuizResult } = useProgress();
+  const { isFinalTestUnlocked, saveQuizResult } = useProgress();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -418,7 +409,13 @@ export default function FinalTest() {
     });
 
     // Record quiz result
-    recordQuizResult('final-ml-assessment', score, FINAL_TEST_QUESTIONS.length);
+    const answersArray = FINAL_TEST_QUESTIONS.map(q => answers[q.id] ?? -1);
+    saveQuizResult('final-ml-assessment', {
+      score,
+      total: FINAL_TEST_QUESTIONS.length,
+      answers: answersArray,
+      submittedAt: new Date().toISOString(),
+    });
   };
 
   if (isSubmitted) {

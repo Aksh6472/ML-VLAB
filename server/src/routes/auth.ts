@@ -50,13 +50,13 @@ authRouter.post('/register', async (req, res): Promise<void> => {
       return;
     }
 
-    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail);
+    const existingEmail = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail);
     if (existingEmail) {
       res.status(409).json({ error: 'An account with this email address already exists.' });
       return;
     }
 
-    const existingStudentId = db.prepare('SELECT id FROM users WHERE student_id = ?').get(trimmedStudentId);
+    const existingStudentId = await db.prepare('SELECT id FROM users WHERE student_id = ?').get(trimmedStudentId);
     if (existingStudentId) {
       res.status(409).json({ error: 'Register number / Student ID is already registered.' });
       return;
@@ -65,12 +65,12 @@ authRouter.post('/register', async (req, res): Promise<void> => {
     const passwordHash = await bcrypt.hash(password, 10);
     const now = new Date().toISOString();
 
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, now, now);
 
-    const insertedUser = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
+    const insertedUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
     const userId = insertedUser?.id || Number(result.lastInsertRowid);
 
     const userPayload = {
@@ -104,7 +104,7 @@ authRouter.post('/login', async (req, res): Promise<void> => {
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
 
     if (!user) {
       res.status(401).json({ error: 'Invalid email or password.' });
@@ -128,7 +128,7 @@ authRouter.post('/login', async (req, res): Promise<void> => {
 
     // Update last login
     const now = new Date().toISOString();
-    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now, user.id);
+    await db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now, user.id);
 
     const userPayload = {
       id: user.id,
@@ -151,9 +151,9 @@ authRouter.post('/login', async (req, res): Promise<void> => {
   }
 });
 
-authRouter.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const user = db.prepare('SELECT id, student_id, name, email, role, created_at, last_login FROM users WHERE id = ?').get(req.user!.id) as any;
+    const user = await db.prepare('SELECT id, student_id, name, email, role, created_at, last_login FROM users WHERE id = ?').get(req.user!.id) as any;
     if (!user) {
       res.status(404).json({ error: 'User not found.' });
       return;
@@ -222,14 +222,14 @@ authRouter.post('/forgot-password', async (req, res): Promise<void> => {
     forgotRateLimits.set(rateLimitKey, nowMs);
 
     // Account Enumeration Defense: Check if user exists, but always return generic message
-    const user = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
+    const user = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
 
     let devPreviewCode: string | undefined = undefined;
 
     if (user) {
       // Invalidate any existing unused reset tokens for this email
       const nowIso = new Date().toISOString();
-      db.prepare('UPDATE password_resets SET used_at = ? WHERE email = ? AND used_at IS NULL').run(nowIso, trimmedEmail);
+      await db.prepare('UPDATE password_resets SET used_at = ? WHERE email = ? AND used_at IS NULL').run(nowIso, trimmedEmail);
 
       // Generate cryptographically secure 6-digit OTP (100000 to 999999)
       const otpCode = String(crypto.randomInt(100000, 1000000));
@@ -240,7 +240,7 @@ authRouter.post('/forgot-password', async (req, res): Promise<void> => {
       // 15-minute expiration
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO password_resets (email, code_hash, attempts, expires_at, used_at, created_at)
         VALUES (?, ?, 0, ?, NULL, ?)
       `).run(trimmedEmail, codeHash, expiresAt, nowIso);
@@ -276,7 +276,7 @@ authRouter.post('/verify-code', async (req, res): Promise<void> => {
     const trimmedEmail = String(email).trim().toLowerCase();
     const cleanCode = String(code).trim();
 
-    const record = db.prepare(`
+    const record = await db.prepare(`
       SELECT id, code_hash, attempts, expires_at 
       FROM password_resets 
       WHERE email = ? AND used_at IS NULL 
@@ -296,7 +296,7 @@ authRouter.post('/verify-code', async (req, res): Promise<void> => {
 
     // Check brute-force attempt lockout (max 5 attempts)
     if (record.attempts >= 5) {
-      db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
+      await db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
       res.status(429).json({ valid: false, error: 'Too many incorrect attempts. This code has been invalidated. Please request a new code.' });
       return;
     }
@@ -310,11 +310,11 @@ authRouter.post('/verify-code', async (req, res): Promise<void> => {
 
     if (!isMatch) {
       const newAttempts = record.attempts + 1;
-      db.prepare('UPDATE password_resets SET attempts = ? WHERE id = ?').run(newAttempts, record.id);
+      await db.prepare('UPDATE password_resets SET attempts = ? WHERE id = ?').run(newAttempts, record.id);
 
       const remaining = 5 - newAttempts;
       if (remaining <= 0) {
-        db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
+        await db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
         res.status(429).json({ valid: false, error: 'Too many incorrect attempts. Please request a new verification code.' });
         return;
       }
@@ -350,7 +350,7 @@ authRouter.post('/reset-password', async (req, res): Promise<void> => {
       return;
     }
 
-    const record = db.prepare(`
+    const record = await db.prepare(`
       SELECT id, code_hash, attempts, expires_at 
       FROM password_resets 
       WHERE email = ? AND used_at IS NULL 
@@ -368,7 +368,7 @@ authRouter.post('/reset-password', async (req, res): Promise<void> => {
     }
 
     if (record.attempts >= 5) {
-      db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
+      await db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(new Date().toISOString(), record.id);
       res.status(429).json({ error: 'Too many incorrect attempts. Please request a new code.' });
       return;
     }
@@ -382,7 +382,7 @@ authRouter.post('/reset-password', async (req, res): Promise<void> => {
 
     if (!isMatch) {
       const newAttempts = record.attempts + 1;
-      db.prepare('UPDATE password_resets SET attempts = ? WHERE id = ?').run(newAttempts, record.id);
+      await db.prepare('UPDATE password_resets SET attempts = ? WHERE id = ?').run(newAttempts, record.id);
       const remaining = 5 - newAttempts;
       res.status(400).json({ error: `Invalid verification code. ${remaining > 0 ? `${remaining} attempts remaining.` : 'Code has been invalidated.'}` });
       return;
@@ -393,8 +393,8 @@ authRouter.post('/reset-password', async (req, res): Promise<void> => {
     const nowIso = new Date().toISOString();
 
     // Update user password and mark code as used atomically
-    db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(passwordHash, trimmedEmail);
-    db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(nowIso, record.id);
+    await db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(passwordHash, trimmedEmail);
+    await db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(nowIso, record.id);
 
     res.json({
       success: true,

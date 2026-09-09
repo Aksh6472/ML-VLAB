@@ -4,17 +4,17 @@ import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 
 export const bookmarksRouter = Router();
 
-bookmarksRouter.get('/', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+bookmarksRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const bookmarks = db.prepare('SELECT id, experiment_id, content_type, title, created_at FROM bookmarks WHERE user_id = ? ORDER BY id DESC').all(userId);
+    const bookmarks = await db.prepare('SELECT id, experiment_id, content_type, title, created_at FROM bookmarks WHERE user_id = ? ORDER BY id DESC').all(userId);
     res.json({ bookmarks });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to retrieve bookmarks.' });
   }
 });
 
-bookmarksRouter.post('/toggle', requireAuth, (req: AuthenticatedRequest, res: Response): void => {
+bookmarksRouter.post('/toggle', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { experimentId, title, type } = req.body;
@@ -25,14 +25,14 @@ bookmarksRouter.post('/toggle', requireAuth, (req: AuthenticatedRequest, res: Re
     }
 
     const expIdStr = String(experimentId);
-    const existing = db.prepare('SELECT id FROM bookmarks WHERE user_id = ? AND experiment_id = ?').get(userId, expIdStr) as any;
+    const existing = await db.prepare('SELECT id FROM bookmarks WHERE user_id = ? AND experiment_id = ?').get(userId, expIdStr) as any;
 
     if (existing) {
-      db.prepare('DELETE FROM bookmarks WHERE id = ?').run(existing.id);
+      await db.prepare('DELETE FROM bookmarks WHERE id = ?').run(existing.id);
       res.json({ bookmarked: false, message: 'Bookmark removed.' });
     } else {
       const now = new Date().toISOString();
-      db.prepare('INSERT INTO bookmarks (user_id, experiment_id, content_type, title, created_at) VALUES (?, ?, ?, ?, ?)')
+      await db.prepare('INSERT INTO bookmarks (user_id, experiment_id, content_type, title, created_at) VALUES (?, ?, ?, ?, ?)')
         .run(userId, expIdStr, type || 'experiment', title || `Experiment ${expIdStr}`, now);
       res.json({ bookmarked: true, message: 'Bookmark added.' });
     }

@@ -17,12 +17,14 @@ async function runTests() {
   console.log('2. Wrong password rejected (401):', wrongLoginRes.status === 401 ? '✅ PASS' : '❌ FAIL');
 
   // 3. Register Student A
-  const studentAEmail = `student_${Date.now()}@srm.edu`;
+  const timestamp = Date.now();
+  const studentAEmail = `student_${timestamp}@srm.edu`;
+  const studentARegId = `RA${timestamp.toString().slice(-10)}`;
   const regRes = await fetch(`${baseUrl}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      studentId: 'RA2111003010999',
+      studentId: studentARegId,
       name: 'Rohan Sharma',
       email: studentAEmail,
       password: 'Password@123',
@@ -98,12 +100,14 @@ async function runTests() {
       ? '✅ PASS' : '❌ FAIL', progA);
 
   // 8. Register Student B & Verify Isolation
-  const studentBEmail = `student_b_${Date.now()}@srm.edu`;
+  const timestampB = Date.now() + 50;
+  const studentBEmail = `student_b_${timestampB}@srm.edu`;
+  const studentBRegId = `RB${timestampB.toString().slice(-10)}`;
   const regBRes = await fetch(`${baseUrl}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      studentId: 'RA2111003010888',
+      studentId: studentBRegId,
       name: 'Pooja Verma',
       email: studentBEmail,
       password: 'Password@123',
@@ -127,7 +131,7 @@ async function runTests() {
   });
   console.log('9. Student blocked from Teacher endpoints (403 Forbidden):', studentAccessTeacherRes.status === 403 ? '✅ PASS' : '❌ FAIL');
 
-  // 10. Teacher Login & Class Oversight
+  // 10. Teacher Login
   const teacherLoginRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -135,23 +139,7 @@ async function runTests() {
   });
   const teacherData = await teacherLoginRes.json();
   const teacherToken = teacherData.token;
-  console.log('10a. Teacher Login:', teacherLoginRes.ok && teacherToken ? '✅ PASS' : '❌ FAIL');
-
-  const teacherStudentsRes = await fetch(`${baseUrl}/teacher/students`, {
-    headers: { Authorization: `Bearer ${teacherToken}` },
-  });
-  const teacherStudents = await teacherStudentsRes.json();
-  console.log('10b. Teacher Student Directory:', teacherStudentsRes.ok && teacherStudents.students.length >= 2 ? '✅ PASS' : '❌ FAIL', `Found ${teacherStudents.students?.length} students`);
-
-  const studentDetailRes = await fetch(`${baseUrl}/teacher/students/${userAId}`, {
-    headers: { Authorization: `Bearer ${teacherToken}` },
-  });
-  const studentDetail = await studentDetailRes.json();
-  console.log('10c. Teacher granular inspection of Student A (10 experiments grid + pretest 100%):',
-    studentDetailRes.ok &&
-    studentDetail.experiments[0].pretest?.score === 2 &&
-    studentDetail.experiments[0].sections.aim === true
-      ? '✅ PASS' : '❌ FAIL');
+  console.log('10. Teacher Login:', teacherLoginRes.ok && teacherToken ? '✅ PASS' : '❌ FAIL');
 
   // 11. Create class and Join class test
   const createClassRes = await fetch(`${baseUrl}/classes`, {
@@ -170,6 +158,13 @@ async function runTests() {
   const joinData = await joinRes.json();
   console.log('11b. Student A join class with code:', joinRes.ok && joinData.message ? '✅ PASS' : '❌ FAIL', joinData);
 
+  // Student B also joins
+  await fetch(`${baseUrl}/classes/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+    body: JSON.stringify({ inviteCode: createdClass.invite_code })
+  });
+
   const duplicateJoinRes = await fetch(`${baseUrl}/classes/join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
@@ -185,6 +180,23 @@ async function runTests() {
   });
   const invalidData = await invalidJoinRes.json();
   console.log('11d. Invalid invite code returns exact error message:', invalidJoinRes.status === 404 && invalidData.error === 'Invalid invite code.' ? '✅ PASS' : '❌ FAIL', invalidData);
+
+  // 12. Teacher Class Oversight (inspect enrolled students)
+  const teacherStudentsRes = await fetch(`${baseUrl}/teacher/students`, {
+    headers: { Authorization: `Bearer ${teacherToken}` },
+  });
+  const teacherStudents = await teacherStudentsRes.json();
+  console.log('12a. Teacher Student Directory:', teacherStudentsRes.ok && teacherStudents.students.length >= 2 ? '✅ PASS' : '❌ FAIL', `Found ${teacherStudents.students?.length} students`);
+
+  const studentDetailRes = await fetch(`${baseUrl}/teacher/students/${userAId}`, {
+    headers: { Authorization: `Bearer ${teacherToken}` },
+  });
+  const studentDetail = await studentDetailRes.json();
+  console.log('12b. Teacher granular inspection of Student A (10 experiments grid + pretest 100%):',
+    studentDetailRes.ok &&
+    studentDetail.experiments[0].pretest?.score === 2 &&
+    studentDetail.experiments[0].sections.aim === true
+      ? '✅ PASS' : '❌ FAIL');
 
   console.log('\n=== ALL INTEGRATION TESTS COMPLETED SUCCESSFULLY ===');
 }

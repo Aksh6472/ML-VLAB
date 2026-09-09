@@ -150,26 +150,29 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const saveQuizResult = useCallback(async (quizId: string, result: QuizResult) => {
-    // quizId format: exp-1-pretest or exp-1-posttest
+    // quizId format: exp-1-pretest, exp-1-posttest, or final-ml-assessment
+    const isExpQuiz = quizId.startsWith('exp-');
     const parts = quizId.split('-');
-    const experimentId = parts[1] || '1';
-    const quizType = parts[2] || 'pretest';
+    const experimentId = isExpQuiz ? (parts[1] || '1') : '';
+    const quizType = isExpQuiz ? (parts[2] || 'pretest') : '';
 
     // 1. Optimistic UI update
     setProgress(prev => ({
       ...prev,
       quizResults: { ...prev.quizResults, [quizId]: result },
-      experiments: {
-        ...prev.experiments,
-        [experimentId]: {
-          ...(prev.experiments[experimentId] || defaultProgress),
-          [quizType as 'pretest' | 'posttest']: true,
+      ...(isExpQuiz && experimentId ? {
+        experiments: {
+          ...prev.experiments,
+          [experimentId]: {
+            ...(prev.experiments[experimentId] || defaultProgress),
+            [quizType as 'pretest' | 'posttest']: true,
+          },
         },
-      },
+      } : {}),
     }));
 
-    // 2. Persist to database if authenticated
-    if (token) {
+    // 2. Persist to database if authenticated and experiment quiz
+    if (token && isExpQuiz && experimentId && ['pretest', 'posttest'].includes(quizType)) {
       try {
         await fetch('/api/quizzes/submit', {
           method: 'POST',

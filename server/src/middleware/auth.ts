@@ -1,7 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'srm-vlab-v2-super-secret-key-2026';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+const rawSecret = process.env.JWT_SECRET;
+
+if (!rawSecret) {
+  if (isProduction) {
+    throw new Error('JWT_SECRET environment variable is required in production');
+  } else {
+    console.warn('[AUTH] Notice: JWT_SECRET not provided, using local development fallback secret.');
+  }
+}
+
+export const JWT_SECRET: string = rawSecret || 'srm-vlab-local-dev-jwt-secret-2026';
 
 export interface AuthUser {
   id: number;
@@ -24,7 +38,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    const decoded = jwt.verify(token, JWT_SECRET) as (jwt.JwtPayload & AuthUser);
     req.user = decoded;
     next();
   } catch (err) {

@@ -8,10 +8,10 @@ export const teacherRouter = Router();
 teacherRouter.use(...requireTeacher);
 
 // Get class-wide statistics
-teacherRouter.get('/stats', (req: AuthenticatedRequest, res: Response): void => {
+teacherRouter.get('/stats', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // Check if teacher has any virtual labs with enrolled students
-    const hasEnrolledStudents = db.prepare(`
+    const hasEnrolledStudents = await db.prepare(`
       SELECT COUNT(DISTINCT vlm.student_id) as count
       FROM virtual_lab_members vlm
       JOIN virtual_labs vl ON vlm.lab_id = vl.id
@@ -29,19 +29,19 @@ teacherRouter.get('/stats', (req: AuthenticatedRequest, res: Response): void => 
 
     const teacherIdParam = req.user!.id;
 
-    const totalStudents = db.prepare(`
+    const totalStudents = await db.prepare(`
       SELECT COUNT(DISTINCT u.id) as count
       FROM users u
       ${studentFilter}
     `).get(teacherIdParam) as any;
 
-    const allProgress = db.prepare(`
+    const allProgress = await db.prepare(`
       SELECT DISTINCT ep.* FROM experiment_progress ep
       JOIN users u ON ep.user_id = u.id
       ${studentFilter.replace('u.id = vlm.student_id', 'ep.user_id = vlm.student_id')}
     `).all(teacherIdParam);
 
-    const allQuizzes = db.prepare(`
+    const allQuizzes = await db.prepare(`
       SELECT DISTINCT qr.* FROM quiz_records qr
       JOIN users u ON qr.user_id = u.id
       ${studentFilter.replace('u.id = vlm.student_id', 'qr.user_id = vlm.student_id')}
@@ -85,13 +85,13 @@ teacherRouter.get('/stats', (req: AuthenticatedRequest, res: Response): void => 
 });
 
 // List students with summary metrics and search
-teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void => {
+teacherRouter.get('/students', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const search = String(req.query.search || '').trim().toLowerCase();
     const teacherId = req.user!.id;
 
     // Check if this teacher has any enrolled students in their labs
-    const enrollmentCheck = db.prepare(`
+    const enrollmentCheck = await db.prepare(`
       SELECT COUNT(DISTINCT vlm.student_id) as count
       FROM virtual_lab_members vlm
       JOIN virtual_labs vl ON vlm.lab_id = vl.id
@@ -130,13 +130,13 @@ teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void 
     query += ` ORDER BY u.name ASC`;
 
     const students = params.length > 0
-      ? db.prepare(query).all(...params)
-      : db.prepare(query).all();
+      ? await db.prepare(query).all(...params)
+      : await db.prepare(query).all();
 
     // Attach computed metrics for each student
-    const studentSummaries = students.map((student: any) => {
-      const progressRows = db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(student.id);
-      const quizRows = db.prepare('SELECT * FROM quiz_records WHERE user_id = ?').all(student.id);
+    const studentSummaries = await Promise.all(students.map(async (student: any) => {
+      const progressRows = await db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(student.id);
+      const quizRows = await db.prepare('SELECT * FROM quiz_records WHERE user_id = ?').all(student.id);
 
       let completedCount = 0;
       let inProgressCount = 0;
@@ -189,7 +189,7 @@ teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void 
         avgQuizScore,
         totalQuizAttempts: quizRows.length,
       };
-    });
+    }));
 
     res.json({ students: studentSummaries });
   } catch (err: any) {
@@ -199,15 +199,13 @@ teacherRouter.get('/students', (req: AuthenticatedRequest, res: Response): void 
 });
 
 // Individual student detailed view
-// Note: If teacher has enrolled students, verify the student belongs to their class.
-// If teacher has no classes yet, allow viewing any student (demo mode).
-teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): void => {
+teacherRouter.get('/students/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const studentId = Number(req.params.id);
     const teacherId = req.user!.id;
 
     // Check if teacher has any enrolled students
-    const enrollmentCheck = db.prepare(`
+    const enrollmentCheck = await db.prepare(`
       SELECT COUNT(DISTINCT vlm.student_id) as count
       FROM virtual_lab_members vlm
       JOIN virtual_labs vl ON vlm.lab_id = vl.id
@@ -218,7 +216,7 @@ teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): v
     let student: any;
     if (hasEnrolled) {
       // Verify student belongs to one of this teacher's labs
-      student = db.prepare(`
+      student = await db.prepare(`
         SELECT DISTINCT u.id, u.student_id, u.name, u.email, u.created_at, u.last_login 
         FROM users u
         JOIN virtual_lab_members vlm ON u.id = vlm.student_id
@@ -227,7 +225,7 @@ teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): v
       `).get(studentId, teacherId) as any;
     } else {
       // No class setup — allow viewing any student
-      student = db.prepare(
+      student = await db.prepare(
         `SELECT id, student_id, name, email, created_at, last_login FROM users WHERE id = ? AND role = 'student'`
       ).get(studentId) as any;
     }
@@ -238,14 +236,14 @@ teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): v
     }
 
     // Get progress across all 10 experiments
-    const progressRows = db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(studentId);
+    const progressRows = await db.prepare('SELECT * FROM experiment_progress WHERE user_id = ?').all(studentId);
     const progressMap: Record<string, any> = {};
     for (const p of progressRows) {
       progressMap[p.experiment_id] = p;
     }
 
     // Get procedure steps
-    const stepRows = db.prepare('SELECT experiment_id, step_index, is_completed FROM procedure_steps WHERE user_id = ?').all(studentId);
+    const stepRows = await db.prepare('SELECT experiment_id, step_index, is_completed FROM procedure_steps WHERE user_id = ?').all(studentId);
     const procedureMap: Record<string, number> = {};
     for (const s of stepRows) {
       if (s.is_completed) {
@@ -254,7 +252,7 @@ teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): v
     }
 
     // Get quizzes grouped by experiment
-    const quizRows = db.prepare('SELECT * FROM quiz_records WHERE user_id = ? ORDER BY id DESC').all(studentId);
+    const quizRows = await db.prepare('SELECT * FROM quiz_records WHERE user_id = ? ORDER BY id DESC').all(studentId);
     const pretestMap: Record<string, any> = {};
     const posttestMap: Record<string, any> = {};
 
@@ -303,8 +301,8 @@ teacherRouter.get('/students/:id', (req: AuthenticatedRequest, res: Response): v
     }
 
     // Get note count and bookmarks count
-    const notes = db.prepare('SELECT experiment_id, content, updated_at FROM notes WHERE user_id = ?').all(studentId);
-    const bookmarks = db.prepare('SELECT experiment_id, title, created_at FROM bookmarks WHERE user_id = ?').all(studentId);
+    const notes = await db.prepare('SELECT experiment_id, content, updated_at FROM notes WHERE user_id = ?').all(studentId);
+    const bookmarks = await db.prepare('SELECT experiment_id, title, created_at FROM bookmarks WHERE user_id = ?').all(studentId);
 
     res.json({
       student: {
