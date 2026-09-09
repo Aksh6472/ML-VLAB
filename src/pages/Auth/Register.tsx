@@ -25,6 +25,22 @@ export default function Register() {
     e.preventDefault();
     setError(null);
 
+    if (!name.trim()) {
+      setError('Full Name is required.');
+      return;
+    }
+
+    if (!studentId.trim()) {
+      setError('Student Register Number / ID is required.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;

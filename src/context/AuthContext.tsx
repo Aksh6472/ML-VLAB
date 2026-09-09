@@ -17,7 +17,7 @@ interface AuthContextType {
   isStudent: boolean;
   isTeacher: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: { studentId?: string; name: string; email: string; password: string; role?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -74,12 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initSession();
   }, [token, fetchProfile]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, role?: string) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role }),
       });
       const data = await res.json();
       if (!res.ok) {

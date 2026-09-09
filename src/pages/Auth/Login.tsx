@@ -29,7 +29,7 @@ export default function Login() {
     setError(null);
     setLoading(true);
 
-    const result = await login(email, password);
+    const result = await login(email, password, role);
     setLoading(false);
 
     if (result.success) {
@@ -39,18 +39,6 @@ export default function Login() {
       navigate(dest, { replace: true });
     } else {
       setError(result.error || 'Failed to sign in. Please verify your credentials.');
-    }
-  };
-
-  const handleQuickFill = (type: 'student' | 'teacher') => {
-    if (type === 'teacher') {
-      setRole('teacher');
-      setEmail('teacher@srm.edu');
-      setPassword('Teacher@123');
-    } else {
-      setRole('student');
-      setEmail('student@srm.edu');
-      setPassword('Student@123');
     }
   };
 
@@ -95,7 +83,7 @@ export default function Login() {
             <input
               id="login-email"
               type="email"
-              placeholder={role === 'teacher' ? 'teacher@srm.edu' : 'student@srm.edu'}
+              placeholder={role === 'teacher' ? 'faculty.email@srmist.edu.in' : 'student.email@srmist.edu.in'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -124,26 +112,6 @@ export default function Login() {
             {loading ? 'Signing in…' : `Sign In as ${role === 'teacher' ? 'Faculty' : 'Student'}`}
           </button>
         </form>
-
-        <div className="auth-quick-fill">
-          <span>Demo quick-fill:</span>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              type="button"
-              className="auth-quick-btn"
-              onClick={() => handleQuickFill('student')}
-            >
-              Student Demo
-            </button>
-            <button
-              type="button"
-              className="auth-quick-btn"
-              onClick={() => handleQuickFill('teacher')}
-            >
-              Teacher Demo
-            </button>
-          </div>
-        </div>
 
         <div className="auth-footer">
           Don't have an account? <Link to="/register">Create Student Account</Link>

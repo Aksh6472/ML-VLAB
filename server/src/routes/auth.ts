@@ -10,32 +10,50 @@ authRouter.post('/register', async (req, res): Promise<void> => {
   try {
     const { studentId, name, email, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      res.status(400).json({ error: 'Name, email, and password are required.' });
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Full Name is required.' });
+      return;
+    }
+
+    if (!email || !String(email).trim()) {
+      res.status(400).json({ error: 'Email address is required.' });
       return;
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
-    if (role === 'teacher') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      res.status(400).json({ error: 'Please enter a valid email address.' });
+      return;
+    }
+
+    if (role === 'teacher' || role === 'faculty') {
       res.status(403).json({ error: 'Teacher registration is restricted. Please contact the administrator.' });
       return;
     }
 
     const assignedRole = 'student';
 
-    if (!studentId) {
+    const trimmedStudentId = studentId ? String(studentId).trim() : '';
+    if (!trimmedStudentId) {
       res.status(400).json({ error: 'Student Register Number / ID is required.' });
       return;
     }
 
-    if (password.length < 6) {
+    if (!password || String(password).length < 6) {
       res.status(400).json({ error: 'Password must be at least 6 characters long.' });
       return;
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail);
-    if (existing) {
+    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail);
+    if (existingEmail) {
       res.status(409).json({ error: 'An account with this email address already exists.' });
+      return;
+    }
+
+    const existingStudentId = db.prepare('SELECT id FROM users WHERE student_id = ?').get(trimmedStudentId);
+    if (existingStudentId) {
+      res.status(409).json({ error: 'Register number / Student ID is already registered.' });
       return;
     }
 
@@ -45,14 +63,14 @@ authRouter.post('/register', async (req, res): Promise<void> => {
     const result = db.prepare(`
       INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(studentId || null, name.trim(), trimmedEmail, passwordHash, assignedRole, now, now);
+    `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, now, now);
 
     const insertedUser = db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
     const userId = insertedUser?.id || Number(result.lastInsertRowid);
 
     const userPayload = {
       id: userId,
-      studentId: studentId || undefined,
+      studentId: trimmedStudentId,
       name: name.trim(),
       email: trimmedEmail,
       role: assignedRole as 'student' | 'teacher',
@@ -73,7 +91,7 @@ authRouter.post('/register', async (req, res): Promise<void> => {
 
 authRouter.post('/login', async (req, res): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required.' });
@@ -92,6 +110,15 @@ authRouter.post('/login', async (req, res): Promise<void> => {
     if (!validPassword) {
       res.status(401).json({ error: 'Invalid email or password.' });
       return;
+    }
+
+    // Role check - strictly enforce role selection from login UI
+    if (role) {
+      const normalizedReqRole = (role === 'faculty' || role === 'teacher') ? 'teacher' : 'student';
+      if (user.role !== normalizedReqRole) {
+        res.status(401).json({ error: 'Invalid email or password.' });
+        return;
+      }
     }
 
     // Update last login
