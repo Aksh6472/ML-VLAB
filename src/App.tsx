@@ -62,13 +62,13 @@ export default function App() {
             {/* Background Layer exclusively for Light Theme */}
             <div 
               className="fixed inset-0 w-full h-screen pointer-events-none z-0 bg-cover bg-center bg-no-repeat block dark:hidden opacity-80 light-theme-bg-layer"
-              style={{ backgroundImage: "url('/light.png')" }}
+              style={{ backgroundImage: "url('/light.png')", backgroundPosition: "center", backgroundSize: "cover" }}
               aria-hidden="true"
             />
             {/* Background Layer exclusively for Dark Theme */}
             <div 
               className="fixed inset-0 w-full h-screen pointer-events-none z-0 bg-cover bg-center bg-no-repeat hidden dark:block opacity-75 dark-theme-bg-layer"
-              style={{ backgroundImage: "url('/dark.jpg')" }}
+              style={{ backgroundImage: "url('/dark.jpg')", backgroundPosition: "center", backgroundSize: "cover" }}
               aria-hidden="true"
             />
             <div className="relative z-10" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
