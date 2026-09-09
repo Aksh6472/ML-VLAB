@@ -77,7 +77,15 @@ export default function ExperimentPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [normalizedId, section]);
-  
+
+  useEffect(() => {
+    if (normalizedId) setLastVisited(normalizedId, activeSection);
+  }, [normalizedId, activeSection, setLastVisited]);
+
+  const handleMarkComplete = useCallback((section: SectionKey) => {
+    markSectionComplete(normalizedId, section);
+  }, [normalizedId, markSectionComplete]);
+
   if (user?.role === 'student' && !isExperimentUnlocked(normalizedId)) {
     return <Navigate to="/student/dashboard" replace />;
   }
@@ -85,16 +93,6 @@ export default function ExperimentPage() {
   if (!section && expMeta) {
     return <Navigate to={`/experiment/${normalizedId}/aim`} replace />;
   }
-
-  useEffect(() => {
-    if (normalizedId) setLastVisited(normalizedId, activeSection);
-  }, [normalizedId, activeSection, setLastVisited]);
-
-
-
-  const handleMarkComplete = useCallback((section: SectionKey) => {
-    markSectionComplete(normalizedId, section);
-  }, [normalizedId, markSectionComplete]);
 
 
   if (!expMeta) {
