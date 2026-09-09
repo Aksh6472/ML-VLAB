@@ -523,11 +523,10 @@ export default function ExperimentPage() {
 
           )}
 
-          {/* ─── Next Experiment ─── */}
-          {nextExp && (
+          {/* ─── Next Experiment (only visible on post-test) ─── */}
+          {nextExp && activeSection === 'posttest' && (
             <Link to={`/experiment/${nextExp.id}`} className="exp-next">
               <div>
-
                 <div className="exp-next-label">Next Experiment</div>
                 <div className="exp-next-title">{String(nextExp.number).padStart(2, '0')}. {nextExp.shortTitle}</div>
               </div>
