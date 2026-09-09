@@ -6,7 +6,10 @@ import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dbFilePath = path.resolve(__dirname, '../../vlab.db');
+const isVercel = Boolean(process.env.VERCEL);
+const dbFilePath = isVercel
+  ? path.join('/tmp', 'vlab.db')
+  : path.resolve(__dirname, '../../vlab.db');
 
 let sqlDb: SqlDatabase;
 
@@ -15,6 +18,10 @@ function saveDb() {
     try {
       const data = sqlDb.export();
       const buffer = Buffer.from(data);
+      const targetDir = path.dirname(dbFilePath);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
       fs.writeFileSync(dbFilePath, buffer);
     } catch (err) {
       console.error('Error saving database to file:', err);
@@ -71,6 +78,25 @@ export const db = {
 
 export async function initDatabase(): Promise<void> {
   const SQL = await initSqlJs();
+
+  if (isVercel && !fs.existsSync(dbFilePath)) {
+    const seedLocations = [
+      path.resolve(process.cwd(), 'vlab.db'),
+      path.resolve(__dirname, '../../vlab.db'),
+      path.resolve(process.cwd(), 'server/vlab.db')
+    ];
+    for (const seedLocation of seedLocations) {
+      if (fs.existsSync(seedLocation)) {
+        try {
+          fs.copyFileSync(seedLocation, dbFilePath);
+          console.log('Seeded /tmp/vlab.db from', seedLocation);
+          break;
+        } catch (e) {
+          console.warn('Failed to seed /tmp/vlab.db:', e);
+        }
+      }
+    }
+  }
 
   if (fs.existsSync(dbFilePath)) {
     try {
