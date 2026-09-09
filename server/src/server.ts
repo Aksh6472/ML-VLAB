@@ -36,6 +36,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'ML V-Lab Server' });
 });
 
+// Lazy database initialization for serverless invocations
+let dbInitialized = false;
+app.use(async (req, res, next) => {
+  if (!dbInitialized) {
+    try {
+      await initDatabase();
+      dbInitialized = true;
+    } catch (err) {
+      console.error('Failed to initialize DB in serverless mode:', err);
+    }
+  }
+  next();
+});
+
 // Centralized error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled server error:', err);
@@ -54,4 +68,9 @@ async function start() {
   }
 }
 
-start();
+// Only start listener in non-Vercel environments
+if (!process.env.VERCEL) {
+  start();
+}
+
+export default app;

@@ -16,20 +16,33 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.2.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "d3": "^7.9.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
     "katex": "^0.16.8",
     "prismjs": "^1.29.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.14.2"
+    "react-router-dom": "^6.14.2",
+    "sql.js": "^1.12.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
     "@types/d3": "^7.4.3",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.17.10",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
+    "@types/sql.js": "^1.4.9",
     "concurrently": "^10.0.5",
+    "tsx": "^4.19.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }
