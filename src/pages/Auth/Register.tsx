@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import srmLogo from '../../assets/srm-logo.png';
 import './Auth.css';
 
 export default function Register() {
   const { register, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const initialRole = (location.state as any)?.role === 'teacher' ? 'teacher' : 'student';
+  const [role, setRole] = useState<'student' | 'teacher'>(initialRole);
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
@@ -30,7 +34,7 @@ export default function Register() {
       return;
     }
 
-    if (!studentId.trim()) {
+    if (role === 'student' && !studentId.trim()) {
       setError('Student Register Number / ID is required.');
       return;
     }
@@ -54,10 +58,10 @@ export default function Register() {
     setLoading(true);
     const result = await register({
       name,
-      studentId,
+      studentId: role === 'student' ? studentId : (studentId.trim() || undefined),
       email,
       password,
-      role: 'student',
+      role,
     });
     setLoading(false);
 
@@ -72,9 +76,28 @@ export default function Register() {
     <div className="auth-container">
       <div className="auth-card animate-fade-in-up">
         <div className="auth-header">
-          <div className="auth-badge">SRM Virtual Laboratory</div>
-          <h1 className="auth-title">Create Account</h1>
-          <p className="auth-subtitle">Register to track experiment procedures, quiz scores, notes, and progress.</p>
+          <img src={srmLogo} alt="SRM Logo" className="auth-logo" style={{ height: '48px', width: 'auto', marginBottom: 'var(--space-3)' }} />
+          <div className="auth-badge">SRM VIRTUAL LABORATORY</div>
+          <h1 className="auth-title">Create {role === 'teacher' ? 'Faculty' : 'Student'} Account</h1>
+          <p className="auth-subtitle">Register to track experiment procedures, quiz scores, notes, and learning progress.</p>
+        </div>
+
+        {/* Role selector tabs */}
+        <div className="auth-role-tabs">
+          <button
+            type="button"
+            className={`auth-role-tab ${role === 'student' ? 'active' : ''}`}
+            onClick={() => setRole('student')}
+          >
+            🎓 Student
+          </button>
+          <button
+            type="button"
+            className={`auth-role-tab ${role === 'teacher' ? 'active' : ''}`}
+            onClick={() => setRole('teacher')}
+          >
+            👨‍🏫 Faculty
+          </button>
         </div>
 
         {error && (
@@ -99,14 +122,16 @@ export default function Register() {
           </div>
 
           <div className="auth-field">
-            <label htmlFor="reg-studentid">Register Number / Student ID</label>
+            <label htmlFor="reg-studentid">
+              {role === 'teacher' ? 'Faculty / Employee ID (Optional)' : 'Register Number / Student ID'}
+            </label>
             <input
               id="reg-studentid"
               type="text"
-              placeholder="e.g. RA2111003010001"
+              placeholder={role === 'teacher' ? 'e.g. EMP10293' : 'e.g. RA2111003010001'}
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
-              required
+              required={role === 'student'}
             />
           </div>
 
@@ -115,7 +140,7 @@ export default function Register() {
             <input
               id="reg-email"
               type="email"
-              placeholder="student@srmist.edu.in"
+              placeholder={role === 'teacher' ? 'faculty.email@srmist.edu.in' : 'student.email@srmist.edu.in'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -154,12 +179,15 @@ export default function Register() {
             className="btn btn-primary auth-submit-btn"
             disabled={loading}
           >
-            {loading ? 'Creating Account…' : 'Register as Student'}
+            {loading ? 'Creating Account…' : `Register as ${role === 'teacher' ? 'Faculty' : 'Student'}`}
           </button>
         </form>
 
         <div className="auth-footer">
-          Already registered? <Link to="/login">Sign In</Link>
+          Already registered?{' '}
+          <Link to="/login" state={{ role }}>
+            Sign In as {role === 'teacher' ? 'Faculty' : 'Student'}
+          </Link>
         </div>
       </div>
     </div>

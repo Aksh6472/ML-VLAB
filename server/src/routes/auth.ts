@@ -32,17 +32,17 @@ authRouter.post('/register', async (req, res): Promise<void> => {
       return;
     }
 
-    if (role === 'teacher' || role === 'faculty') {
-      res.status(403).json({ error: 'Teacher registration is restricted. Please contact the administrator.' });
+    const isTeacherRole = role === 'teacher' || role === 'faculty';
+    const assignedRole: 'student' | 'teacher' = isTeacherRole ? 'teacher' : 'student';
+
+    let trimmedStudentId = studentId ? String(studentId).trim() : '';
+    if (!isTeacherRole && !trimmedStudentId) {
+      res.status(400).json({ error: 'Student Register Number / ID is required.' });
       return;
     }
 
-    const assignedRole = 'student';
-
-    const trimmedStudentId = studentId ? String(studentId).trim() : '';
-    if (!trimmedStudentId) {
-      res.status(400).json({ error: 'Student Register Number / ID is required.' });
-      return;
+    if (isTeacherRole && !trimmedStudentId) {
+      trimmedStudentId = `FAC-${Math.floor(100000 + Math.random() * 900000)}`;
     }
 
     if (!password || String(password).length < 6) {
@@ -56,10 +56,12 @@ authRouter.post('/register', async (req, res): Promise<void> => {
       return;
     }
 
-    const existingStudentId = await db.prepare('SELECT id FROM users WHERE student_id = ?').get(trimmedStudentId);
-    if (existingStudentId) {
-      res.status(409).json({ error: 'Register number / Student ID is already registered.' });
-      return;
+    if (trimmedStudentId) {
+      const existingStudentId = await db.prepare('SELECT id FROM users WHERE student_id = ?').get(trimmedStudentId);
+      if (existingStudentId) {
+        res.status(409).json({ error: isTeacherRole ? 'Faculty ID is already registered.' : 'Register number / Student ID is already registered.' });
+        return;
+      }
     }
 
     const passwordHash = await bcrypt.hash(password, 10);

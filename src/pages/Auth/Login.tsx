@@ -155,7 +155,10 @@ export default function Login() {
         </form>
 
         <div className="auth-footer">
-          Don't have an account? <Link to="/register">Create Student Account</Link>
+          Don't have an account?{' '}
+          <Link to="/register" state={{ role }}>
+            Create {role === 'teacher' ? 'Faculty' : 'Student'} Account
+          </Link>
         </div>
       </div>
     </div>
