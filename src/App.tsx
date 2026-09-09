@@ -17,6 +17,7 @@ const Glossary = lazy(() => import('./pages/Glossary'));
 const VisualLab = lazy(() => import('./pages/VisualLab'));
 const Login = lazy(() => import('./pages/Auth/Login'));
 const Register = lazy(() => import('./pages/Auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword'));
 const StudentDashboard = lazy(() => import('./pages/Student/StudentDashboard'));
 const StudentProfile = lazy(() => import('./pages/Student/StudentProfile'));
 const TeacherDashboard = lazy(() => import('./pages/Teacher/TeacherDashboard'));
@@ -82,6 +83,8 @@ export default function App() {
                   {/* Auth routes — always public */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ForgotPassword />} />
 
                   {/* Convenience /dashboard → correct dashboard */}
                   <Route path="/dashboard" element={<RootRedirect />} />

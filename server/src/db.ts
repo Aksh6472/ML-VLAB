@@ -200,10 +200,21 @@ export async function initDatabase(): Promise<void> {
       UNIQUE(lab_id, student_id)
     );
 
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_progress_user ON experiment_progress(user_id);
     CREATE INDEX IF NOT EXISTS idx_quizzes_user ON quiz_records(user_id);
     CREATE INDEX IF NOT EXISTS idx_vlab_invite ON virtual_labs(invite_code);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_email ON password_resets(email);
   `);
 
   // Seed default teacher account if not present

@@ -10,9 +10,14 @@ export default function Login() {
   const location = useLocation();
 
   const [role, setRole] = useState<'student' | 'teacher'>('student');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(
+    (location.state as any)?.resetSuccess
+      ? 'Your password has been successfully reset. Please sign in with your new password.'
+      : null
+  );
   const [loading, setLoading] = useState(false);
 
   // If already authenticated, redirect immediately to home
@@ -27,6 +32,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMsg(null);
     setLoading(true);
 
     const result = await login(email, password, role);
@@ -70,6 +76,27 @@ export default function Login() {
           </button>
         </div>
 
+        {successMsg && (
+          <div
+            className="animate-fade-in"
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'rgba(52, 211, 153, 0.1)',
+              border: '1px solid rgba(52, 211, 153, 0.3)',
+              borderRadius: 'var(--radius-md)',
+              color: '#34d399',
+              fontSize: 'var(--text-sm)',
+              marginBottom: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <span>✅</span>
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         {error && (
           <div className="auth-error-banner animate-fade-in" style={{ marginBottom: 'var(--space-4)' }}>
             <span>⚠️</span>
@@ -92,7 +119,21 @@ export default function Login() {
           </div>
 
           <div className="auth-field">
-            <label htmlFor="login-password">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label htmlFor="login-password">Password</label>
+              <Link
+                to="/forgot-password"
+                state={{ email }}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--accent-primary)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="login-password"
               type="password"
