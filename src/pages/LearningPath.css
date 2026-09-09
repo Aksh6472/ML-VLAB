@@ -876,22 +876,50 @@
 /* ─── Responsive Media Queries ─── */
 @media (max-width: 900px) {
   .forest-floating-hud {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 6px 12px;
-    top: 8px;
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
     left: 10px;
     right: 10px;
+    width: calc(100% - 20px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
+    z-index: 35;
+  }
+
+  .forest-hud-left {
+    justify-content: space-between;
+    width: 100%;
   }
 
   .forest-hud-bar {
-    width: 80px;
+    width: 90px;
   }
 
   .forest-hud-continue-btn {
     width: 100%;
     justify-content: center;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .forest-rpg-viewport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .forest-rpg-canvas {
+    min-width: 850px;
+    height: 100%;
+    position: relative;
+  }
+
+  .forest-rpg-bg-image {
+    object-fit: cover;
+    object-position: center;
   }
 
   .forest-tree-canopy {
@@ -904,15 +932,15 @@
   }
 
   .forest-node-label-plate {
-    max-width: 90px;
-    padding: 1px 4px;
+    max-width: 100px;
+    padding: 2px 6px;
   }
 
   .forest-label-name {
-    font-size: 8.5px;
+    font-size: 9px;
   }
 
   .forest-label-sub {
-    display: none;
+    font-size: 7.5px;
   }
 }
