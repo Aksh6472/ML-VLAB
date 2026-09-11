@@ -41,8 +41,8 @@ function MoonIcon() {
 export default function Header() {
   const location = useLocation();
 
-  // Hide header completely on standalone authentication routes (/login and /register)
-  if (location.pathname === '/login' || location.pathname === '/register') {
+  // Hide header completely on standalone authentication routes (/login, /faculty/login, /register)
+  if (['/login', '/faculty/login', '/register'].includes(location.pathname)) {
     return null;
   }
 
@@ -51,6 +51,7 @@ export default function Header() {
   const { getOverallPercent } = useProgress();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const overallPercent = getOverallPercent();
   const circumference = 2 * Math.PI * 7;
@@ -134,6 +135,15 @@ export default function Header() {
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
 
+          <button
+            className="header-mobile-toggle"
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            aria-label="Toggle mobile menu"
+            title="Menu"
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+
           {/* Auth area */}
           {isAuthenticated && user ? (
             <div className="header-user-menu-wrapper" style={{ position: 'relative' }}>
@@ -214,6 +224,54 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile navigation drop-down menu */}
+      {mobileMenuOpen && (
+        <div className="header-mobile-menu animate-fade-in">
+          {navItems.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) => `header-mobile-link${isActive ? ' active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span>{item.label}</span>
+              <span>→</span>
+            </NavLink>
+          ))}
+          {isAuthenticated && (
+            <NavLink
+              to={dashboardPath}
+              className={({ isActive }) => `header-mobile-link${isActive ? ' active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span>📊 My Dashboard</span>
+              <span>→</span>
+            </NavLink>
+          )}
+          {isAuthenticated && user?.role === 'teacher' && (
+            <>
+              <NavLink
+                to="/teacher/tests"
+                className={({ isActive }) => `header-mobile-link${isActive ? ' active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span>📋 Tests & Score Reports</span>
+                <span>→</span>
+              </NavLink>
+              <NavLink
+                to="/teacher/tests/create"
+                className={({ isActive }) => `header-mobile-link${isActive ? ' active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span>➕ Create New Test</span>
+                <span>→</span>
+              </NavLink>
+            </>
+          )}
+        </div>
+      )}
     </header>
   );
 }
