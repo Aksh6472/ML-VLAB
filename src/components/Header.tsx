@@ -58,8 +58,9 @@ export default function Header() {
 
   const handleLogout = () => {
     setShowUserMenu(false);
+    const targetLogin = user?.role === 'teacher' ? '/faculty/login' : '/login';
     logout();
-    navigate('/login', { replace: true });
+    navigate(targetLogin, { replace: true });
   };
 
   const dashboardPath = user?.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';

@@ -38,13 +38,19 @@ export default function ProtectedRoute({ children, role }: ProtectedRouteProps) 
     );
   }
 
-  // Not authenticated → redirect to login, preserving intended destination
+  // Not authenticated → redirect to appropriate login route, preserving intended destination
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const isFacultyPath = location.pathname.startsWith('/faculty') || location.pathname.startsWith('/teacher');
+    const loginTarget = isFacultyPath ? '/faculty/login' : '/login';
+    return <Navigate to={loginTarget} state={{ from: location }} replace />;
   }
 
-  // Wrong role → redirect to their correct dashboard
+  // Wrong role → redirect to their correct dashboard / login
   if (role && user?.role !== role) {
+    const isFacultyPath = location.pathname.startsWith('/faculty') || location.pathname.startsWith('/teacher');
+    if (user?.role === 'student' && isFacultyPath) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
     const correctDashboard = user?.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
     return <Navigate to={correctDashboard} replace />;
   }

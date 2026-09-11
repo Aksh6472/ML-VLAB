@@ -85,6 +85,7 @@ export default function App() {
 
                   {/* Auth routes — always public */}
                   <Route path="/login" element={<Login />} />
+                  <Route path="/faculty/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ForgotPassword />} />
@@ -167,7 +168,7 @@ export default function App() {
                     }
                   />
 
-                  {/* ── Teacher-only routes ───────────────────────── */}
+                  {/* ── Faculty / Teacher-only routes ───────────────────────── */}
                   <Route
                     path="/teacher/dashboard"
                     element={
@@ -225,11 +226,55 @@ export default function App() {
                     }
                   />
 
-                  {/* Route Aliases for /faculty/tests* */}
-                  <Route path="/faculty/tests" element={<Navigate to="/teacher/tests" replace />} />
-                  <Route path="/faculty/tests/create" element={<Navigate to="/teacher/tests/create" replace />} />
-                  <Route path="/faculty/tests/edit/:id" element={<Navigate to="/teacher/tests" replace />} />
-                  <Route path="/faculty/tests/:id/reports" element={<Navigate to="/teacher/tests" replace />} />
+                  {/* Explicit Role-Protected /faculty/* Routes */}
+                  <Route
+                    path="/faculty/dashboard"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <TeacherDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/faculty/students/:id"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <StudentDetailView />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/faculty/tests"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <FacultyTestsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/faculty/tests/create"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <CreateTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/faculty/tests/edit/:id"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <CreateTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/faculty/tests/:id/reports"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <TestReportView />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* 404 Catch-All */}
                   <Route path="*" element={<NotFound />} />

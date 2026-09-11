@@ -9,7 +9,8 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
+  const isFacultyRoute = location.pathname.startsWith('/faculty');
+  const [role, setRole] = useState<'student' | 'teacher'>(isFacultyRoute ? 'teacher' : 'student');
   const [email, setEmail] = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,12 +21,22 @@ export default function Login() {
   );
   const [loading, setLoading] = useState(false);
 
-  // If already authenticated, redirect immediately to home
+  // Sync role if route changes between /login and /faculty/login
+  React.useEffect(() => {
+    if (location.pathname.startsWith('/faculty')) {
+      setRole('teacher');
+    } else if (location.pathname === '/login') {
+      setRole('student');
+    }
+  }, [location.pathname]);
+
+  // If already authenticated, redirect immediately to home/dashboard
   React.useEffect(() => {
     if (isAuthenticated && user) {
       const from = (location.state as any)?.from?.pathname;
-      const isValidSubRoute = from && !['/', '/login', '/register', '/home'].includes(from);
-      navigate(isValidSubRoute ? from : '/', { replace: true });
+      const isValidSubRoute = from && !['/', '/login', '/faculty/login', '/register', '/home'].includes(from);
+      const defaultDashboard = user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
+      navigate(isValidSubRoute ? from : defaultDashboard, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location]);
 
@@ -40,8 +51,9 @@ export default function Login() {
 
     if (result.success) {
       const from = (location.state as any)?.from?.pathname;
-      const isValidSubRoute = from && !['/', '/login', '/register', '/home'].includes(from);
-      const dest = isValidSubRoute ? from : '/';
+      const isValidSubRoute = from && !['/', '/login', '/faculty/login', '/register', '/home'].includes(from);
+      const defaultDashboard = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
+      const dest = isValidSubRoute ? from : defaultDashboard;
       navigate(dest, { replace: true });
     } else {
       setError(result.error || 'Failed to sign in. Please verify your credentials.');
