@@ -1,0 +1,7 @@
+/* src/pages/Teacher/TestReportView.css */
+
+.report-container {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: calc(var(--header-height) + 24px) var(--space-6) var(--space-20);
+}

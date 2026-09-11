@@ -221,12 +221,56 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS faculty_tests (
+      id SERIAL PRIMARY KEY,
+      teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      class_section TEXT NOT NULL,
+      subject_course TEXT,
+      description TEXT,
+      time_limit_mins INTEGER DEFAULT 30,
+      passing_score_percent INTEGER DEFAULT 60,
+      due_date TEXT,
+      status TEXT NOT NULL CHECK(status IN ('draft', 'published')),
+      questions_json TEXT NOT NULL,
+      settings_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS student_test_submissions (
+      id SERIAL PRIMARY KEY,
+      test_id INTEGER NOT NULL REFERENCES faculty_tests(id) ON DELETE CASCADE,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      score INTEGER NOT NULL,
+      total_questions INTEGER NOT NULL,
+      percentage REAL NOT NULL,
+      answers_json TEXT NOT NULL,
+      submitted_at TEXT NOT NULL,
+      UNIQUE(test_id, student_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_progress_user ON experiment_progress(user_id);
     CREATE INDEX IF NOT EXISTS idx_quizzes_user ON quiz_records(user_id);
     CREATE INDEX IF NOT EXISTS idx_vlab_invite ON virtual_labs(invite_code);
     CREATE INDEX IF NOT EXISTS idx_password_resets_email ON password_resets(email);
   `);
+
+  // Safe column migrations for existing PostgreSQL databases
+  const pgColumns = [
+    'ADD COLUMN IF NOT EXISTS subject_course TEXT',
+    'ADD COLUMN IF NOT EXISTS time_limit_mins INTEGER DEFAULT 30',
+    'ADD COLUMN IF NOT EXISTS passing_score_percent INTEGER DEFAULT 60',
+    'ADD COLUMN IF NOT EXISTS settings_json TEXT'
+  ];
+  for (const colDef of pgColumns) {
+    try {
+      await pool.query(`ALTER TABLE faculty_tests ${colDef}`);
+    } catch (e) {
+      // Ignore if table or column already exists or minor notice
+    }
+  }
 }
 
 function createSqliteSchema(sqlDb: SqlDatabase): void {
@@ -327,6 +371,35 @@ function createSqliteSchema(sqlDb: SqlDatabase): void {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS faculty_tests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      class_section TEXT NOT NULL,
+      subject_course TEXT,
+      description TEXT,
+      time_limit_mins INTEGER DEFAULT 30,
+      passing_score_percent INTEGER DEFAULT 60,
+      due_date TEXT,
+      status TEXT NOT NULL CHECK(status IN ('draft', 'published')),
+      questions_json TEXT NOT NULL,
+      settings_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS student_test_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      test_id INTEGER NOT NULL REFERENCES faculty_tests(id) ON DELETE CASCADE,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      score INTEGER NOT NULL,
+      total_questions INTEGER NOT NULL,
+      percentage REAL NOT NULL,
+      answers_json TEXT NOT NULL,
+      submitted_at TEXT NOT NULL,
+      UNIQUE(test_id, student_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_progress_user ON experiment_progress(user_id);
     CREATE INDEX IF NOT EXISTS idx_quizzes_user ON quiz_records(user_id);
@@ -376,6 +449,14 @@ async function doInitDatabase(): Promise<void> {
     }
 
     createSqliteSchema(sqlDb);
+    
+    // Migration helper for existing SQLite databases
+    const columns = ['subject_course TEXT', 'time_limit_mins INTEGER DEFAULT 30', 'passing_score_percent INTEGER DEFAULT 60', 'settings_json TEXT'];
+    for (const col of columns) {
+      try {
+        sqlDb.exec(`ALTER TABLE faculty_tests ADD COLUMN ${col}`);
+      } catch (e) {}
+    }
     saveDb();
   }
 

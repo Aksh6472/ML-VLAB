@@ -10,6 +10,23 @@ export default function StudentDashboard() {
   const { progress, getCompletionPercent, getOverallPercent, isExperimentUnlocked, isFinalTestUnlocked } = useProgress();
 
   const [classes, setClasses] = useState<any[]>([]);
+  const [assignedTests, setAssignedTests] = useState<any[]>([]);
+  const [activeTest, setActiveTest] = useState<any | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [submittingTest, setSubmittingTest] = useState(false);
+  const [testResult, setTestResult] = useState<any | null>(null);
+
+  const fetchAssignedTests = () => {
+    if (!token) return;
+    fetch('/api/student/assigned-tests', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data.tests)) setAssignedTests(data.tests);
+    })
+    .catch(console.error);
+  };
 
   useEffect(() => {
     if (token) {
@@ -21,6 +38,8 @@ export default function StudentDashboard() {
         if (Array.isArray(data)) setClasses(data);
       })
       .catch(console.error);
+
+      fetchAssignedTests();
     }
   }, [token]);
 
@@ -172,6 +191,76 @@ export default function StudentDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Faculty Assigned Tests Section */}
+      {assignedTests.length > 0 && (
+        <div className="dash-experiments-table-card" style={{ marginBottom: 'var(--space-6)', borderLeft: '4px solid var(--accent-primary)' }}>
+          <div style={{ padding: 'var(--space-5)', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>📝 Faculty Assigned Tests</h2>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '2px 0 0' }}>
+                Assessments created and assigned by your course instructors.
+              </p>
+            </div>
+            <span className="badge badge-navy">{assignedTests.length} Total Test{assignedTests.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          <div style={{ padding: 'var(--space-5)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
+            {assignedTests.map(test => {
+              const isSubmitted = Boolean(test.submission);
+              return (
+                <div key={test.id} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span className={`dash-status-badge ${isSubmitted ? 'completed' : 'in-progress'}`}>
+                        {isSubmitted ? `✓ Completed (${test.submission.percentage}%)` : '● Pending'}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{test.questionCount} Questions</span>
+                    </div>
+
+                    <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {test.title}
+                    </h3>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                      Class: <strong>{test.classSection}</strong> · Instructor: {test.teacherName}
+                    </div>
+                    {test.description && (
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '4px 0 12px' }}>
+                        {test.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                    {test.dueDate ? (
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Due: {new Date(test.dueDate).toLocaleDateString()}</span>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>No due date</span>
+                    )}
+
+                    {isSubmitted ? (
+                      <button className="btn btn-secondary btn-sm" disabled style={{ opacity: 0.7 }}>
+                        Score: {test.submission.score}/{test.submission.totalQuestions} ({test.submission.percentage}%)
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          setActiveTest(test);
+                          setUserAnswers({});
+                          setTestResult(null);
+                        }}
+                      >
+                        Take Test →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -371,6 +460,138 @@ export default function StudentDashboard() {
           )}
         </div>
       </div>
+
+      {/* Interactive Assigned Test Modal */}
+      {activeTest && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-xl)', maxWidth: '750px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: 'var(--shadow-xl)', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-primary)', pb: '16px', marginBottom: '20px' }}>
+              <div>
+                <span className="badge badge-navy" style={{ marginBottom: '6px', display: 'inline-block' }}>Assigned Assessment</span>
+                <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: 0 }}>{activeTest.title}</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', marginTop: '4px' }}>
+                  Class: {activeTest.classSection} · Instructor: {activeTest.teacherName}
+                </p>
+              </div>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setActiveTest(null)}
+                style={{ fontSize: '18px', padding: '4px 8px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {testResult ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏆</div>
+                <h3 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)' }}>Test Submitted!</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-md)', margin: '8px 0 20px' }}>
+                  You scored <strong style={{ color: '#38a169', fontSize: 'var(--text-xl)' }}>{testResult.score} / {testResult.totalQuestions}</strong> ({testResult.percentage}%)
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setActiveTest(null);
+                    setTestResult(null);
+                    fetchAssignedTests();
+                  }}
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
+                  {activeTest.questions.map((q: any, idx: number) => (
+                    <div key={idx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '4px' }}>
+                        Question {idx + 1} of {activeTest.questions.length} · Exp {q.expId}
+                      </div>
+                      <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px', lineHeight: 1.5 }}>
+                        {q.question}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(['A', 'B', 'C', 'D'] as const).map(letter => {
+                          const optionText = q[`option${letter}`];
+                          const isSelected = userAnswers[idx] === letter;
+                          return (
+                            <label
+                              key={letter}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '10px 14px',
+                                borderRadius: 'var(--radius-md)',
+                                border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-secondary)',
+                                background: isSelected ? 'rgba(74, 144, 226, 0.1)' : 'var(--bg-surface)',
+                                cursor: 'pointer',
+                                fontSize: 'var(--text-sm)',
+                                color: 'var(--text-primary)',
+                                fontWeight: isSelected ? 600 : 400,
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name={`q-${idx}`}
+                                checked={isSelected}
+                                onChange={() => setUserAnswers(prev => ({ ...prev, [idx]: letter }))}
+                              />
+                              <span><strong>{letter}.</strong> {optionText}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: '16px', borderTop: '1px solid var(--border-primary)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    Answered {Object.keys(userAnswers).length} of {activeTest.questions.length} questions
+                  </span>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button className="btn btn-secondary" onClick={() => setActiveTest(null)}>
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={submittingTest || Object.keys(userAnswers).length === 0}
+                      onClick={async () => {
+                        try {
+                          setSubmittingTest(true);
+                          const res = await fetch(`/api/student/assigned-tests/${activeTest.id}/submit`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ answers: userAnswers }),
+                          });
+
+                          const data = await res.json();
+                          if (res.ok && data.success) {
+                            setTestResult(data);
+                          } else {
+                            alert(data.error || 'Failed to submit test.');
+                          }
+                        } catch (err) {
+                          alert('Error submitting test.');
+                        } finally {
+                          setSubmittingTest(false);
+                        }
+                      }}
+                    >
+                      {submittingTest ? 'Submitting...' : 'Submit Assessment ✓'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

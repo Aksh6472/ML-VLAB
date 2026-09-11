@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { glossaryTerms, GlossaryItem } from '../data/glossaryData';
 import { experiments } from '../data/experiments';
 import FormulaCard from '../components/FormulaCard';
+import GlossaryVisual from '../components/GlossaryVisual';
 import './Glossary.css';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -186,6 +187,9 @@ export default function Glossary() {
                 </div>
 
                 <p className="glossary-card-def">{item.definition}</p>
+
+                {/* Educational Vector Illustration */}
+                <GlossaryVisual termId={item.id} category={item.category} />
 
                 {/* Optional LaTeX Formula */}
                 {item.formula && (

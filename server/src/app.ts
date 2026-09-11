@@ -9,6 +9,7 @@ import { notesRouter } from './routes/notes.js';
 import { bookmarksRouter } from './routes/bookmarks.js';
 import { teacherRouter } from './routes/teacher.js';
 import { classesRouter } from './routes/classes.js';
+import { studentTestsRouter } from './routes/studentTests.js';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ apiRouter.use('/notes', notesRouter);
 apiRouter.use('/bookmarks', bookmarksRouter);
 apiRouter.use('/teacher', teacherRouter);
 apiRouter.use('/classes', classesRouter);
+apiRouter.use('/student', studentTestsRouter);
 
 // Mount with and without /api prefix for maximum Vercel serverless compatibility
 app.use('/api', apiRouter);

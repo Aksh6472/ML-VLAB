@@ -44,6 +44,7 @@ export default function StudentDetailView() {
   const [notes, setNotes] = useState<any[]>([]);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
+  const [assignedSubmissions, setAssignedSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +65,7 @@ export default function StudentDetailView() {
           setNotes(data.notes || []);
           setBookmarks(data.bookmarks || []);
           setQuizHistory(data.quizHistory || []);
+          setAssignedSubmissions(data.assignedTestSubmissions || []);
         } else {
           setError('Student record not found.');
         }
@@ -102,6 +104,29 @@ export default function StudentDetailView() {
 
   const completedExps = expDetails.filter(e => e.status === 'Completed').length;
   const inProgressExps = expDetails.filter(e => e.status === 'In Progress').length;
+  const remainingExps = Math.max(0, 10 - completedExps);
+
+  // Compute pre-test & post-test averages
+  const pretestEntries = expDetails.filter(e => e.pretest).map(e => e.pretest!.percentage);
+  const posttestEntries = expDetails.filter(e => e.posttest).map(e => e.posttest!.percentage);
+
+  const avgPretest = pretestEntries.length > 0
+    ? (pretestEntries.reduce((a, b) => a + b, 0) / pretestEntries.length).toFixed(1)
+    : '—';
+  const avgPosttest = posttestEntries.length > 0
+    ? (posttestEntries.reduce((a, b) => a + b, 0) / posttestEntries.length).toFixed(1)
+    : '—';
+
+  // Total completed sections across all 10 experiments (each experiment has 6 sections)
+  const totalCompletedSections = expDetails.reduce((acc, e) => {
+    const s = e.sections;
+    return acc + (s.aim ? 1 : 0) + (s.theory ? 1 : 0) + (s.pretest ? 1 : 0) +
+      (s.procedure ? 1 : 0) + (s.results ? 1 : 0) + (s.posttest ? 1 : 0);
+  }, 0);
+  const overallCompletionPercent = Math.min(100, Math.round((totalCompletedSections / 60) * 100));
+
+  // Faculty assigned test score
+  const latestAssignedSub = assignedSubmissions.length > 0 ? assignedSubmissions[0] : null;
 
   return (
     <div className="teacher-container animate-fade-in">
@@ -118,30 +143,49 @@ export default function StudentDetailView() {
         </Link>
       </div>
 
-      {/* Summary Chips */}
-      <div className="student-detail-header-card">
-        <div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            Laboratory Status
+      {/* Summary Metrics Row */}
+      <div className="dash-metrics-grid" style={{ marginBottom: 'var(--space-6)' }}>
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-label">Completed Exps</span>
+            <span className="dash-metric-icon">✅</span>
           </div>
-          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {completedExps} Completed · {inProgressExps} In Progress
+          <div className="dash-metric-val" style={{ color: 'var(--success)' }}>
+            {completedExps} / 10
           </div>
+          <div className="dash-metric-sub">{remainingExps} remaining · {inProgressExps} in progress</div>
         </div>
-        <div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            Last Active
+
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-label">Overall Completion</span>
+            <span className="dash-metric-icon">📊</span>
           </div>
-          <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {student.lastLogin ? new Date(student.lastLogin).toLocaleString() : 'Never'}
-          </div>
+          <div className="dash-metric-val">{overallCompletionPercent}%</div>
+          <div className="dash-metric-sub">Across 60 section modules</div>
         </div>
-        <div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            Records Mode
+
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-label">Pre / Post Test Avg</span>
+            <span className="dash-metric-icon">📝</span>
           </div>
-          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--success)', marginTop: '4px', background: 'rgba(56, 161, 105, 0.1)', padding: '3px 8px', borderRadius: '4px' }}>
-            🔒 Verified Read-Only
+          <div className="dash-metric-val" style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>
+            {avgPretest}% / <span style={{ color: 'var(--success)' }}>{avgPosttest}%</span>
+          </div>
+          <div className="dash-metric-sub">Module diagnostic averages</div>
+        </div>
+
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-label">Assigned Test Score</span>
+            <span className="dash-metric-icon">🏆</span>
+          </div>
+          <div className="dash-metric-val" style={{ color: latestAssignedSub ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+            {latestAssignedSub ? `${latestAssignedSub.percentage}%` : 'Not Taken'}
+          </div>
+          <div className="dash-metric-sub">
+            {latestAssignedSub ? `${latestAssignedSub.score}/${latestAssignedSub.total_questions} (${latestAssignedSub.test_title})` : 'No faculty test submitted'}
           </div>
         </div>
       </div>

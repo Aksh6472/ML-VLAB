@@ -93,6 +93,14 @@ export default function Header() {
               Dashboard
             </NavLink>
           )}
+          {isAuthenticated && user?.role === 'teacher' && (
+            <NavLink
+              to="/teacher/tests"
+              className={({ isActive }) => `header-nav-link${isActive ? ' active' : ''}`}
+            >
+              Tests
+            </NavLink>
+          )}
         </nav>
 
         <div className="header-actions">
@@ -169,6 +177,24 @@ export default function Header() {
                     >
                       📊 My Dashboard
                     </Link>
+                    {user.role === 'teacher' && (
+                      <>
+                        <Link
+                          to="/teacher/tests"
+                          className="header-user-dropdown-item"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          📋 Tests & Score Reports
+                        </Link>
+                        <Link
+                          to="/teacher/tests/create"
+                          className="header-user-dropdown-item"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          ➕ Create New Test
+                        </Link>
+                      </>
+                    )}
                     <div className="header-user-dropdown-divider" />
                     <button
                       className="header-user-dropdown-item header-user-logout"

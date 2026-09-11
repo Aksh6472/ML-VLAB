@@ -19,6 +19,9 @@ interface StudentSummary {
   avgPosttestScore: number | null;
   avgQuizScore: number | null;
   totalQuizAttempts: number;
+  finalTestScore?: number | null;
+  assignedTestStatus?: 'Pending' | 'Completed' | 'Not Assigned';
+  assignedTestScore?: number | null;
 }
 
 interface ClassStats {
@@ -108,13 +111,21 @@ export default function TeacherDashboard() {
 
   return (
     <div className="teacher-container animate-fade-in">
-      <div className="teacher-header">
+      <div className="teacher-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="teacher-badge">Faculty Portal</div>
           <h1 className="dash-title">Teacher Oversight & Records</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginTop: '4px' }}>
             Instructor: <strong>{user?.name}</strong> · Monitoring student laboratory progress & assessments.
           </p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Link to="/teacher/tests" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            📋 Tests Overview
+          </Link>
+          <Link to="/teacher/tests/create" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            ➕ Create Test
+          </Link>
         </div>
       </div>
 
@@ -264,6 +275,8 @@ export default function TeacherDashboard() {
                   <th>Completed Exps</th>
                   <th>Pre-Test Avg</th>
                   <th>Post-Test Avg</th>
+                  <th>Final Test Score</th>
+                  <th>Assigned Test Status</th>
                   <th>Last Active</th>
                   <th>Action</th>
                 </tr>
@@ -304,6 +317,22 @@ export default function TeacherDashboard() {
                       ) : (
                         <span style={{ color: 'var(--text-tertiary)' }}>—</span>
                       )}
+                    </td>
+                    <td>
+                      {st.finalTestScore !== null && st.finalTestScore !== undefined ? (
+                        <span style={{ fontWeight: 600, color: '#805ad5' }}>{st.finalTestScore}%</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-tertiary)' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`dash-status-badge ${(st.assignedTestStatus || 'Not Assigned').toLowerCase().replace(' ', '-')}`}>
+                        {st.assignedTestStatus === 'Completed'
+                          ? `✓ Completed (${st.assignedTestScore || 0}%)`
+                          : st.assignedTestStatus === 'Pending'
+                          ? '● Pending'
+                          : '○ Not Assigned'}
+                      </span>
                     </td>
                     <td>
                       <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>

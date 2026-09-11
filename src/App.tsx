@@ -22,6 +22,9 @@ const StudentDashboard = lazy(() => import('./pages/Student/StudentDashboard'));
 const StudentProfile = lazy(() => import('./pages/Student/StudentProfile'));
 const TeacherDashboard = lazy(() => import('./pages/Teacher/TeacherDashboard'));
 const StudentDetailView = lazy(() => import('./pages/Teacher/StudentDetailView'));
+const CreateTest = lazy(() => import('./pages/Teacher/CreateTest'));
+const FacultyTestsPage = lazy(() => import('./pages/Teacher/FacultyTestsPage'));
+const TestReportView = lazy(() => import('./pages/Teacher/TestReportView'));
 const JoinClassPage = lazy(() => import('./pages/Student/JoinClassPage'));
 const FinalTest = lazy(() => import('./pages/Student/FinalTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -181,6 +184,52 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/teacher/create-test"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <CreateTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teacher/tests"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <FacultyTestsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teacher/tests/create"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <CreateTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teacher/tests/edit/:id"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <CreateTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teacher/tests/:id/reports"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <TestReportView />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Route Aliases for /faculty/tests* */}
+                  <Route path="/faculty/tests" element={<Navigate to="/teacher/tests" replace />} />
+                  <Route path="/faculty/tests/create" element={<Navigate to="/teacher/tests/create" replace />} />
+                  <Route path="/faculty/tests/edit/:id" element={<Navigate to="/teacher/tests" replace />} />
+                  <Route path="/faculty/tests/:id/reports" element={<Navigate to="/teacher/tests" replace />} />
 
                   {/* 404 Catch-All */}
                   <Route path="*" element={<NotFound />} />
