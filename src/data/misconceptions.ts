@@ -17,7 +17,7 @@ interface DiagnosisInput {
   questionIndex?: number;
 }
 
-// Pre-defined misconception mappings for experiment quizzes and final assessment
+// Comprehensive misconception rules for experiment quizzes and final assessment
 const MISCONCEPTION_RULES: Array<{
   keyword: string | RegExp;
   optionKeyword?: string | RegExp;
@@ -26,7 +26,71 @@ const MISCONCEPTION_RULES: Array<{
   recommendedRevision: string;
   expId: string;
 }> = [
-  // Exp 1: Data Pre-processing
+  // ─── Exp 1: Data Pre-processing ───
+  {
+    keyword: /LabelEncoder|Label encoding|small.*medium.*large/i,
+    optionKeyword: /equal frequency/i,
+    misconception: 'Confusing integer label encoding with category frequency or class balance. LabelEncoder maps string labels to numerical IDs (0, 1, 2) rather than measuring frequency.',
+    correctConcept: 'LabelEncoder assigns sequential integers (0, 1, 2), causing algorithms (like linear regression or SVMs) to falsely assume an ordinal rank (Large > Medium > Small).',
+    recommendedRevision: 'Experiment 1 → Categorical Encoding & Ordinality',
+    expId: '1',
+  },
+  {
+    keyword: /LabelEncoder|Label encoding|small.*medium.*large/i,
+    optionKeyword: /continuous/i,
+    misconception: 'Assuming integer label encoding converts discrete text labels into smooth continuous metrics. The assigned integer codes remain discrete category identifiers.',
+    correctConcept: 'Label encoding converts text labels to discrete integer codes; One-Hot encoding creates separate binary columns for unordered categories without imposing rank.',
+    recommendedRevision: 'Experiment 1 → Categorical Encoding Strategies',
+    expId: '1',
+  },
+  {
+    keyword: /LabelEncoder|Label encoding|small.*medium.*large/i,
+    optionKeyword: /Missing values/i,
+    misconception: 'Confusing categorical encoding with missing value imputation. LabelEncoder processes existing text labels and does not detect or replace missing NaN entries.',
+    correctConcept: 'Missing value imputation must be performed prior to categorical encoding using summary statistics like mean, median, or mode.',
+    recommendedRevision: 'Experiment 1 → Missing Values vs Encoding',
+    expId: '1',
+  },
+  {
+    keyword: /StandardScaler on the full dataset|data leakage/i,
+    optionKeyword: /unnormalised/i,
+    misconception: 'Confusing statistical data leakage with failure to scale features. StandardScaler still scales the dataset, but fitting on the full dataset leaks test set mean and variance into training.',
+    correctConcept: 'Data leakage occurs when test set statistics contaminate training transformations. Scalers must be fit strictly on training data.',
+    recommendedRevision: 'Experiment 1 → Data Leakage & Scikit-Learn Pipelines',
+    expId: '1',
+  },
+  {
+    keyword: /StandardScaler on the full dataset|data leakage/i,
+    optionKeyword: /slower/i,
+    misconception: 'Mistaking statistical evaluation integrity for computational runtime speed. Fitting before splitting does not slow execution, but it invalidates test metrics.',
+    correctConcept: 'Data leakage inflates evaluation metrics by letting training transformations learn from test set distributions. Use Pipelines to keep splits clean.',
+    recommendedRevision: 'Experiment 1 → Scikit-Learn Pipelines',
+    expId: '1',
+  },
+  {
+    keyword: /StandardScaler on the full dataset|data leakage/i,
+    optionKeyword: /raise an error/i,
+    misconception: 'Expecting a syntax or runtime exception instead of a subtle statistical flaw. Code executes without crashing, but test evaluation becomes unreliably optimistic.',
+    correctConcept: 'Data leakage is a methodology flaw, not a code crash. Scikit-learn Pipelines ensure scaler statistics are computed strictly on training folds.',
+    recommendedRevision: 'Experiment 1 → Avoiding Data Leakage',
+    expId: '1',
+  },
+  {
+    keyword: /MinMaxScaler|scaled value will be/i,
+    optionKeyword: /Exactly 1\.0/i,
+    misconception: 'Assuming MinMaxScaler clamps or clips unseen test samples to the [0, 1] range. Scalers apply fixed linear parameters learned during fitting without hard clipping bounds.',
+    correctConcept: 'MinMaxScaler applies (x - min) / (max - min) using fixed training statistics. If a test value exceeds the training maximum, its scaled output will exceed 1.0.',
+    recommendedRevision: 'Experiment 1 → Feature Scaling & Out-of-Bounds Handling',
+    expId: '1',
+  },
+  {
+    keyword: /MinMaxScaler|scaled value will be/i,
+    optionKeyword: /Exactly 0\.0|Negative/i,
+    misconception: 'Confusing upper out-of-bounds sample values with minimum boundary scaling or negative normalization.',
+    correctConcept: 'A sample value higher than any in the training set results in a scaled value > 1.0 because the formula numerator is larger than the training range.',
+    recommendedRevision: 'Experiment 1 → MinMaxScaler Mechanics',
+    expId: '1',
+  },
   {
     keyword: /purpose of data pre-processing|pre-processing/i,
     optionKeyword: /generate predictions|visualise|select/i,
@@ -36,31 +100,31 @@ const MISCONCEPTION_RULES: Array<{
     expId: '1',
   },
   {
-    keyword: /imputation/i,
-    optionKeyword: /deleting|zero|ignoring/i,
-    misconception: 'Assuming missing data is either discarded or filled with arbitrary zeros.',
+    keyword: /imputation|SimpleImputer/i,
+    optionKeyword: /deleting|zero|ignoring|950|1050|Depends/i,
+    misconception: 'Assuming missing data imputation discards rows or alters sample size.',
     correctConcept: 'Imputation substitutes missing values using computed statistics (mean, median, mode) to preserve sample size.',
     recommendedRevision: 'Experiment 1 → Handling Missing Values',
     expId: '1',
   },
   {
-    keyword: /label encoding|one-hot/i,
-    optionKeyword: /binary|float|random|ordinal/i,
-    misconception: 'Misunderstanding how categorical encoding converts discrete text labels.',
-    correctConcept: 'Label encoding assigns unique integers to categories, whereas One-Hot encoding creates binary indicator columns without rank.',
-    recommendedRevision: 'Experiment 1 → Numerical and Categorical Variables',
+    keyword: /one-hot encoding|unique categories/i,
+    optionKeyword: /1|4|10/i,
+    misconception: 'Miscalculating binary indicator columns generated by one-hot encoding.',
+    correctConcept: 'One-hot encoding creates exactly 1 binary indicator column per unique category (5 categories = 5 columns).',
+    recommendedRevision: 'Experiment 1 → One-Hot Encoding',
     expId: '1',
   },
   {
-    keyword: /data leakage/i,
-    optionKeyword: /underfitting|overfitting|slow|unnormalised/i,
-    misconception: 'Confusing data leakage with general model fitting errors.',
-    correctConcept: 'Data leakage happens when test set statistics contaminate training preprocessing steps, inflating performance metrics artificially.',
-    recommendedRevision: 'Experiment 1 → Data Leakage & Pipelines',
+    keyword: /pipe\.fit|Pipeline/i,
+    optionKeyword: /Only the scaler|Only the classifier|X_test/i,
+    misconception: 'Misinterpreting Pipeline execution steps.',
+    correctConcept: 'Calling fit() on a Pipeline sequentially fits transformers on X_train, then fits the estimator on scaled X_train.',
+    recommendedRevision: 'Experiment 1 → Scikit-Learn Pipelines',
     expId: '1',
   },
 
-  // Exp 2: Linear Regression
+  // ─── Exp 2: Linear Regression ───
   {
     keyword: /R-squared|R²|0\.85/i,
     optionKeyword: /prediction error|incorrect|directly on|mean absolute/i,
@@ -78,7 +142,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '2',
   },
 
-  // Exp 3: Cross-Validation
+  // ─── Exp 3: Cross-Validation ───
   {
     keyword: /Stratified K-Fold/i,
     optionKeyword: /speeds up|eliminates|removes outliers/i,
@@ -88,7 +152,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '3',
   },
 
-  // Exp 4: Logistic Regression
+  // ─── Exp 4: Logistic Regression ───
   {
     keyword: /Sigmoid|activation function/i,
     optionKeyword: /ReLU|Softmax|Tanh/i,
@@ -106,7 +170,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '4',
   },
 
-  // Exp 5: PCA
+  // ─── Exp 5: PCA ───
   {
     keyword: /principal components|PCA/i,
     optionKeyword: /Centroids|Leaf nodes|Support vectors/i,
@@ -116,7 +180,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '5',
   },
 
-  // Exp 6: SVM
+  // ─── Exp 6: SVM ───
   {
     keyword: /Support Vectors|Kernel Trick|hyperparameter C/i,
     optionKeyword: /center points|outliers|trees|probability/i,
@@ -126,7 +190,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '6',
   },
 
-  // Exp 7: K-Means
+  // ─── Exp 7: K-Means ───
   {
     keyword: /K-Means|Elbow Method|centroids/i,
     optionKeyword: /Supervised|Scree|gradient descent/i,
@@ -136,7 +200,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '7',
   },
 
-  // Exp 8: Decision Trees
+  // ─── Exp 8: Decision Trees ───
   {
     keyword: /Gini Impurity|prunes|Information Gain/i,
     optionKeyword: /Standard Error|Silhouette|Log Loss/i,
@@ -146,7 +210,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '8',
   },
 
-  // Exp 9: Random Forest
+  // ─── Exp 9: Random Forest ───
   {
     keyword: /Random Forest|Bagging|OOB/i,
     optionKeyword: /Boosting|Stacking|learning rate/i,
@@ -156,7 +220,7 @@ const MISCONCEPTION_RULES: Array<{
     expId: '9',
   },
 
-  // Exp 10: Perceptron
+  // ─── Exp 10: Perceptron ───
   {
     keyword: /Perceptron|XOR|weighted sum/i,
     optionKeyword: /Inability|Too many|Decision Node|Centroid/i,
@@ -175,8 +239,8 @@ export function getMisconceptionDiagnosis(input: DiagnosisInput): MisconceptionD
 
   // Search pre-defined rules
   for (const rule of MISCONCEPTION_RULES) {
-    const qMatch = typeof rule.keyword === 'string' ? questionText.includes(rule.keyword) : rule.keyword.test(questionText);
-    const optMatch = !rule.optionKeyword || (typeof rule.optionKeyword === 'string' ? selectedOptionText.includes(rule.optionKeyword) : rule.optionKeyword.test(selectedOptionText));
+    const qMatch = typeof rule.keyword === 'string' ? questionText.toLowerCase().includes(rule.keyword.toLowerCase()) : rule.keyword.test(questionText);
+    const optMatch = !rule.optionKeyword || (typeof rule.optionKeyword === 'string' ? selectedOptionText.toLowerCase().includes(rule.optionKeyword.toLowerCase()) : rule.optionKeyword.test(selectedOptionText));
 
     if (qMatch && optMatch) {
       return {
@@ -188,13 +252,16 @@ export function getMisconceptionDiagnosis(input: DiagnosisInput): MisconceptionD
     }
   }
 
-  // Dynamic intelligent fallback based on parameters
+  // Dynamic intelligent fallback based on option text
   const targetExp = expId || '1';
   const targetTopic = topicTitle || `Experiment ${targetExp} Core Concepts`;
 
+  const cleanSelected = selectedOptionText.replace(/^[A-D]\s*–\s*/, '').trim();
+  const cleanCorrect = correctOptionText.replace(/^[A-D]\s*–\s*/, '').trim();
+
   return {
-    misconception: `You selected "${selectedOptionText}", which confuses key definitions for this concept.`,
-    correctConcept: `"${correctOptionText}" is correct because it directly satisfies the theoretical principle defined in this module.`,
+    misconception: `Selecting "${cleanSelected}" confuses the specific mechanics of this module with a different algorithmic concept.`,
+    correctConcept: `"${cleanCorrect}" is the correct theoretical principle for this concept.`,
     recommendedRevision: `Experiment ${targetExp} → ${targetTopic}`,
     expId: targetExp,
   };
