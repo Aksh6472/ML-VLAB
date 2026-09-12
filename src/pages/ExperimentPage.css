@@ -572,12 +572,44 @@
 }
 
 @media (max-width: 640px) {
+  .exp-main {
+    padding: 12px 6px;
+  }
+  .exp-content {
+    padding: 16px 12px;
+    border-radius: var(--radius-lg);
+    box-shadow: none;
+  }
+  .exp-aim-card {
+    padding: 16px 12px;
+  }
   .exp-aim-meta {
     flex-direction: column;
     gap: var(--space-2);
   }
   .exp-procedure-ipo {
     grid-template-columns: 1fr;
+  }
+  .exp-procedure-step {
+    padding: 14px 10px;
+    gap: 10px;
+  }
+  .exp-nav-tab {
+    padding: 6px 11px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .exp-main {
+    padding: 8px 4px;
+  }
+  .exp-content {
+    padding: 14px 10px;
+  }
+  .exp-section-title {
+    font-size: var(--text-xl);
   }
 }
 
