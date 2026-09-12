@@ -131,9 +131,6 @@ export default function Quiz({ quizId, title, description, questions, variant = 
             <button className="btn btn-primary" onClick={() => setShowReview(true)}>
               Review Detailed Answers & AI Diagnosis
             </button>
-            <button className="btn btn-secondary" onClick={handleRetake}>
-              Retake Quiz
-            </button>
           </div>
         </div>
       )}
@@ -213,7 +210,6 @@ export default function Quiz({ quizId, title, description, questions, variant = 
           })}
           <div style={{ marginTop: 'var(--space-5)', display: 'flex', gap: 'var(--space-3)' }}>
             <button className="btn btn-secondary" onClick={() => setShowReview(false)}>Back to Score</button>
-            <button className="btn btn-ghost" onClick={handleRetake}>Retake Quiz</button>
           </div>
         </div>
       )}

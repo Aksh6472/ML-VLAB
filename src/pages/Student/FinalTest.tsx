@@ -582,9 +582,6 @@ export default function FinalTest() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            <button className="btn btn-secondary" onClick={() => { setIsSubmitted(false); setCurrentIndex(0); setAnswers({}); }}>
-              Retake Final Test
-            </button>
             <Link to="/student/dashboard" className="btn btn-primary">
               Return to Dashboard
             </Link>
