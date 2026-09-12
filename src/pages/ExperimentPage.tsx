@@ -162,33 +162,32 @@ export default function ExperimentPage() {
 
   return (
     <div className="exp-layout" key={`exp-page-${normalizedId}`}>
-      {/* ─── Sidebar ─── */}
-      <aside className="exp-sidebar" aria-label="Experiment sections">
-        <div className="exp-sidebar-header">
-          <div className="exp-sidebar-number">{String(expMeta.number).padStart(2, '0')}</div>
-          <div className="exp-sidebar-title">{expMeta.shortTitle}</div>
-        </div>
-        <ul className="exp-sidebar-nav">
-          {sections.map(s => {
-            const isActive = activeSection === s.key;
-            const isComplete = progress[s.key];
-            return (
-              <li key={s.key} className="exp-sidebar-item">
+      {/* ─── Top Horizontal Section Navigation Bar (sticky under main header for ALL screen sizes) ─── */}
+      <nav className="exp-nav-bar" aria-label="Experiment sections navigation">
+        <div className="exp-nav-container">
+          <div className="exp-nav-meta">
+            <span className="exp-nav-num">Exp {String(expMeta.number).padStart(2, '0')}</span>
+            <span className="exp-nav-title">{expMeta.shortTitle}</span>
+          </div>
+          <div className="exp-nav-tabs">
+            {sections.map(s => {
+              const isActive = activeSection === s.key;
+              const isComplete = progress[s.key];
+              return (
                 <Link
+                  key={s.key}
                   to={`/experiment/${normalizedId}/${s.key}`}
-                  className={`exp-sidebar-link${isActive ? ' exp-sidebar-link--active' : ''}${isComplete ? ' exp-sidebar-link--completed' : ''}`}
+                  className={`exp-nav-tab${isActive ? ' active' : ''}${isComplete ? ' completed' : ''}`}
                   aria-current={isActive ? 'step' : undefined}
                 >
-                  <span className="exp-sidebar-step-num">
-                    {isComplete ? '✓' : s.number}
-                  </span>
-                  {s.label}
+                  <span className="exp-nav-tab-num">{isComplete ? '✓' : s.number}</span>
+                  <span className="exp-nav-tab-label">{s.label}</span>
                 </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </aside>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
 
       {/* ─── Main Content ─── */}
       <main className="exp-main">
@@ -207,26 +206,6 @@ export default function ExperimentPage() {
               experimentId={normalizedId} 
               experimentTitle={expMeta.title} 
             />
-          </div>
-
-          {/* Mobile Section Navigation (visible on mobile / tablet screens) */}
-          <div className="exp-mobile-nav">
-            <div className="exp-mobile-nav-scroll">
-              {sections.map(s => {
-                const isActive = activeSection === s.key;
-                const isComplete = progress[s.key];
-                return (
-                  <Link
-                    key={s.key}
-                    to={`/experiment/${normalizedId}/${s.key}`}
-                    className={`exp-mobile-nav-btn${isActive ? ' active' : ''}${isComplete ? ' completed' : ''}`}
-                  >
-                    <span className="exp-mobile-nav-num">{isComplete ? '✓' : s.number}</span>
-                    <span>{s.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
           </div>
 
           {/* ═══ AIM ═══ */}
@@ -248,7 +227,6 @@ export default function ExperimentPage() {
               )}
             </div>
             <div className="exp-aim-card">
-              <ExperimentVideoPlayer experimentNumber={expMeta.number} title={expMeta.title} />
               <p className="exp-aim-text">{parseBoldText(content.aim)}</p>
               <div className="exp-aim-objectives">
                 <h4>Learning Objectives</h4>
@@ -263,6 +241,11 @@ export default function ExperimentPage() {
                 <span className="exp-aim-meta-item">📊 {expMeta.difficulty}</span>
                 <span className="exp-aim-meta-item">📁 {expMeta.category}</span>
               </div>
+            </div>
+
+            {/* Video Introduction Explainer Card */}
+            <div style={{ marginTop: 'var(--space-6)' }}>
+              <ExperimentVideoPlayer experimentNumber={expMeta.number} title={expMeta.title} />
             </div>
 
             {/* Section Footer Navigation */}
