@@ -553,9 +553,18 @@
 }
 
 /* ─── Responsive Adjustments ─── */
+@media (max-width: 768px) {
+  .home-section {
+    padding: 36px var(--space-4);
+  }
+}
+
 @media (max-width: 640px) {
   .home-hero {
-    padding: var(--space-6) var(--space-4);
+    padding-top: calc(var(--header-height) + var(--space-5));
+    padding-bottom: var(--space-6);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
   }
   .home-hero-card {
     padding: var(--space-6) var(--space-4);
@@ -567,7 +576,7 @@
   .home-hero-actions .btn {
     width: 100%;
   }
-  .home-join-card {
+  .home-modal-card {
     padding: var(--space-6) var(--space-4);
   }
   .home-join-input-wrapper {
@@ -578,6 +587,12 @@
   }
   .home-experiments-list {
     grid-template-columns: 1fr;
+  }
+  .home-exp-item {
+    padding: var(--space-3) var(--space-4);
+  }
+  .home-footer {
+    padding: var(--space-6) var(--space-4);
   }
 }
 
