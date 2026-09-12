@@ -275,6 +275,14 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/faculty/*"
+                    element={
+                      <ProtectedRoute role="teacher">
+                        <TeacherDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* 404 Catch-All */}
                   <Route path="*" element={<NotFound />} />

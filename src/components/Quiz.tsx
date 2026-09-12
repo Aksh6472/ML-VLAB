@@ -1,6 +1,8 @@
 // src/components/Quiz.tsx
 import React, { useState, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useProgress } from '../context/ProgressContext';
+import { getMisconceptionDiagnosis } from '../data/misconceptions';
 import './Quiz.css';
 
 interface Question {
@@ -127,7 +129,7 @@ export default function Quiz({ quizId, title, description, questions, variant = 
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={() => setShowReview(true)}>
-              Review Detailed Answers
+              Review Detailed Answers & AI Diagnosis
             </button>
             <button className="btn btn-secondary" onClick={handleRetake}>
               Retake Quiz
@@ -144,6 +146,21 @@ export default function Quiz({ quizId, title, description, questions, variant = 
           </button>
           {questions.map((question, qi) => {
             const isCorrect = answers[qi] === question.answer;
+            const isAnswered = answers[qi] >= 0;
+            const selectedOpt = isAnswered ? question.options[answers[qi]] : 'Not answered';
+            const correctOpt = question.options[question.answer];
+
+            const expIdMatch = quizId.match(/exp-(\d+)/);
+            const expId = expIdMatch ? expIdMatch[1] : undefined;
+
+            const diagnosis = !isCorrect ? getMisconceptionDiagnosis({
+              questionText: question.q,
+              selectedOptionText: selectedOpt,
+              correctOptionText: correctOpt,
+              expId,
+              questionIndex: qi,
+            }) : null;
+
             return (
               <div
                 key={qi}
@@ -160,6 +177,37 @@ export default function Quiz({ quizId, title, description, questions, variant = 
                     </div>
                   )}
                 </div>
+
+                {!isCorrect && diagnosis && (
+                  <div className="misconception-diagnosis-box" style={{
+                    marginTop: '12px',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(237, 137, 54, 0.08)',
+                    border: '1px solid rgba(237, 137, 54, 0.25)',
+                    borderLeft: '4px solid #ed8936',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#c05621', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>💡</span> <span>AI Misconception Diagnosis</span>
+                    </div>
+                    <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      <strong>Misconception:</strong> {diagnosis.misconception}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <strong>Correct Concept:</strong> {diagnosis.correctConcept}
+                    </div>
+                    <div style={{ color: 'var(--accent-primary)', fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <span><strong>Recommended Revision:</strong> {diagnosis.recommendedRevision}</span>
+                      {diagnosis.expId && (
+                        <Link to={`/experiment/${diagnosis.expId}`} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                          Go to Experiment →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

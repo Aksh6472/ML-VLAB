@@ -65,9 +65,13 @@ export default function Login() {
       <div className="auth-card animate-fade-in-up">
         <div className="auth-header">
           <img src={srmLogo} alt="SRM Logo" className="auth-logo" style={{ height: '48px', width: 'auto', marginBottom: 'var(--space-3)' }} />
-          <div className="auth-badge">SRM VIRTUAL LABORATORY</div>
-          <h1 className="auth-title">Welcome Back</h1>
-          <p className="auth-subtitle">Sign in to access your experiment records, quizzes, and learning dashboard.</p>
+          <div className="auth-badge">{isFacultyRoute ? 'SRM FACULTY PORTAL' : 'SRM VIRTUAL LABORATORY'}</div>
+          <h1 className="auth-title">{isFacultyRoute ? 'Faculty Sign In' : 'Student Sign In'}</h1>
+          <p className="auth-subtitle">
+            {isFacultyRoute
+              ? 'Sign in to access faculty oversight, class analytics, student records, and test creation.'
+              : 'Sign in to access your experiment records, quizzes, and learning dashboard.'}
+          </p>
         </div>
 
         {/* Role selector tabs */}

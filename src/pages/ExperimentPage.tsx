@@ -9,6 +9,7 @@ import PythonBlock from '../components/PythonBlock';
 import FormulaCard from '../components/FormulaCard';
 import Quiz from '../components/Quiz';
 import ExperimentUtilities from '../components/ExperimentUtilities';
+import ExperimentVideoPlayer from '../components/ExperimentVideoPlayer';
 
 // Visualizations
 import LinearRegressionViz from '../components/visualizations/LinearRegressionViz';
@@ -222,6 +223,7 @@ export default function ExperimentPage() {
               )}
             </div>
             <div className="exp-aim-card">
+              <ExperimentVideoPlayer experimentNumber={expMeta.number} title={expMeta.title} />
               <p className="exp-aim-text">{parseBoldText(content.aim)}</p>
               <div className="exp-aim-objectives">
                 <h4>Learning Objectives</h4>

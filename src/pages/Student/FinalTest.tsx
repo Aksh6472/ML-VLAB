@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useProgress } from '../../context/ProgressContext';
 import { experiments } from '../../data/experiments';
+import { getMisconceptionDiagnosis } from '../../data/misconceptions';
 import './FinalTest.css';
 
 interface Question {
@@ -512,6 +513,68 @@ export default function FinalTest() {
                   </div>
                   <div className="final-test-progress-bar" style={{ margin: '6px 0 4px', height: '4px' }}>
                     <div className="final-test-progress-fill" style={{ width: `${pct}%`, background: pct >= 67 ? '#38a169' : '#dd6b20' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* AI Misconception Diagnosis for Incorrect Answers */}
+          <h3 style={{ fontSize: '16px', marginTop: '28px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>💡</span> <span>AI Misconception Diagnoses ({FINAL_TEST_QUESTIONS.filter(q => answers[q.id] !== q.correctAnswer).length} Incorrect)</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {FINAL_TEST_QUESTIONS.filter(q => answers[q.id] !== q.correctAnswer).map((q) => {
+              const userAnsIdx = answers[q.id];
+              const selectedOpt = userAnsIdx !== undefined ? q.options[userAnsIdx] : 'Not answered';
+              const correctOpt = q.options[q.correctAnswer];
+              const diag = getMisconceptionDiagnosis({
+                questionText: q.question,
+                selectedOptionText: selectedOpt,
+                correctOptionText: correctOpt,
+                expId: q.expId,
+                topicTitle: q.topicTitle,
+              });
+
+              return (
+                <div key={q.id} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                    Question {q.id} · Exp {q.expId}: {q.topicTitle}
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    {q.question}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--error, #e53e3e)', marginBottom: '4px' }}>
+                    Your answer: <strong>{selectedOpt}</strong>
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--success, #38a169)', marginBottom: '12px' }}>
+                    Correct answer: <strong>{correctOpt}</strong>
+                  </div>
+
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(237, 137, 54, 0.08)',
+                    border: '1px solid rgba(237, 137, 54, 0.25)',
+                    borderLeft: '4px solid #ed8936',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#c05621', marginBottom: '4px' }}>
+                      💡 AI Misconception Diagnosis
+                    </div>
+                    <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      <strong>Misconception:</strong> {diag.misconception}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <strong>Correct Concept:</strong> {diag.correctConcept}
+                    </div>
+                    <div style={{ color: 'var(--accent-primary)', fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <span><strong>Recommended Revision:</strong> {diag.recommendedRevision}</span>
+                      <Link to={`/experiment/${q.expId}`} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                        Go to Experiment →
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );
