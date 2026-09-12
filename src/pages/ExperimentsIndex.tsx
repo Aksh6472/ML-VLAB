@@ -3,10 +3,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { experiments } from '../data/experiments';
 import { useProgress } from '../context/ProgressContext';
+import { useAuth } from '../context/AuthContext';
 import './Home.css';
 import './ExperimentsIndex.css';
 
 export default function ExperimentsIndex() {
+  const { isTeacher } = useAuth();
   const { getCompletionPercent, isExperimentUnlocked, isFinalTestUnlocked } = useProgress();
   const finalTestUnlocked = isFinalTestUnlocked();
 
@@ -90,33 +92,35 @@ export default function ExperimentsIndex() {
             })}
           </div>
 
-          {/* Final Test Card */}
-          <div style={{ marginTop: 'var(--space-10)', padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-            <div>
-              <span className="badge" style={{ background: finalTestUnlocked ? 'rgba(56, 161, 105, 0.1)' : '#edf2f7', color: finalTestUnlocked ? '#38a169' : '#718096', marginBottom: '8px' }}>
-                {finalTestUnlocked ? '🏆 UNLOCKED' : '🔒 FINAL ASSESSMENT LOCKED'}
-              </span>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: '8px 0 4px' }}>
-                Final Machine Learning Assessment
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', margin: 0, maxWidth: '600px' }}>
-                {finalTestUnlocked
-                  ? 'Evaluate your comprehensive mastery of ML concepts across all 10 experiments with 30 targeted MCQs.'
-                  : 'Complete all 10 experiments sequentially to unlock the Final ML Assessment.'}
-              </p>
+          {/* Final Test Card - Hidden for Faculty/Teachers */}
+          {!isTeacher && (
+            <div style={{ marginTop: 'var(--space-10)', padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+              <div>
+                <span className="badge" style={{ background: finalTestUnlocked ? 'rgba(56, 161, 105, 0.1)' : '#edf2f7', color: finalTestUnlocked ? '#38a169' : '#718096', marginBottom: '8px' }}>
+                  {finalTestUnlocked ? '🏆 UNLOCKED' : '🔒 FINAL ASSESSMENT LOCKED'}
+                </span>
+                <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: '8px 0 4px' }}>
+                  Final Machine Learning Assessment
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', margin: 0, maxWidth: '600px' }}>
+                  {finalTestUnlocked
+                    ? 'Evaluate your comprehensive mastery of ML concepts across all 10 experiments with 30 targeted MCQs.'
+                    : 'Complete all 10 experiments sequentially to unlock the Final ML Assessment.'}
+                </p>
+              </div>
+              <div>
+                {finalTestUnlocked ? (
+                  <Link to="/final-test" className="btn btn-primary" style={{ background: '#38a169', border: 'none' }}>
+                    Take Final Test →
+                  </Link>
+                ) : (
+                  <button className="btn btn-secondary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                    🔒 Locked
+                  </button>
+                )}
+              </div>
             </div>
-            <div>
-              {finalTestUnlocked ? (
-                <Link to="/final-test" className="btn btn-primary" style={{ background: '#38a169', border: 'none' }}>
-                  Take Final Test →
-                </Link>
-              ) : (
-                <button className="btn btn-secondary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
-                  🔒 Locked
-                </button>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
