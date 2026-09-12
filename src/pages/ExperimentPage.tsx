@@ -155,6 +155,11 @@ export default function ExperimentPage() {
 
   const procedureSteps = getProcedureSteps(normalizedId, content.procedure.steps.length);
 
+  const sectionOrder: SectionKey[] = ['aim', 'theory', 'pretest', 'procedure', 'results', 'posttest'];
+  const currentIndex = sectionOrder.indexOf(activeSection);
+  const prevSectionKey = currentIndex > 0 ? sectionOrder[currentIndex - 1] : null;
+  const nextSectionKey = currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
+
   return (
     <div className="exp-layout" key={`exp-page-${normalizedId}`}>
       {/* ─── Sidebar ─── */}
@@ -204,6 +209,26 @@ export default function ExperimentPage() {
             />
           </div>
 
+          {/* Mobile Section Navigation (visible on mobile / tablet screens) */}
+          <div className="exp-mobile-nav">
+            <div className="exp-mobile-nav-scroll">
+              {sections.map(s => {
+                const isActive = activeSection === s.key;
+                const isComplete = progress[s.key];
+                return (
+                  <Link
+                    key={s.key}
+                    to={`/experiment/${normalizedId}/${s.key}`}
+                    className={`exp-mobile-nav-btn${isActive ? ' active' : ''}${isComplete ? ' completed' : ''}`}
+                  >
+                    <span className="exp-mobile-nav-num">{isComplete ? '✓' : s.number}</span>
+                    <span>{s.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ═══ AIM ═══ */}
           {activeSection === "aim" && (
           <section
@@ -238,6 +263,20 @@ export default function ExperimentPage() {
                 <span className="exp-aim-meta-item">📊 {expMeta.difficulty}</span>
                 <span className="exp-aim-meta-item">📁 {expMeta.category}</span>
               </div>
+            </div>
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
             </div>
           </section>
 
@@ -359,6 +398,20 @@ export default function ExperimentPage() {
                 )}
               </div>
             ))}
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
+            </div>
           </section>
 
           )}
@@ -385,6 +438,20 @@ export default function ExperimentPage() {
               variant="pretest"
               onComplete={() => handleMarkComplete('pretest')}
             />
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
+            </div>
           </section>
 
           )}
@@ -460,6 +527,20 @@ export default function ExperimentPage() {
                 );
               })}
             </div>
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
+            </div>
           </section>
 
           )}
@@ -495,6 +576,20 @@ export default function ExperimentPage() {
               <div className="exp-results-insight-label">Key Insight</div>
               <p>{content.results.keyInsight}</p>
             </div>
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
+            </div>
           </section>
 
           )}
@@ -521,6 +616,20 @@ export default function ExperimentPage() {
               variant="posttest"
               onComplete={() => handleMarkComplete('posttest')}
             />
+
+            {/* Section Footer Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {prevSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${prevSectionKey}`} className="btn btn-secondary btn-sm">
+                  ← Previous: {sections.find(s => s.key === prevSectionKey)?.label}
+                </Link>
+              ) : <div />}
+              {nextSectionKey ? (
+                <Link to={`/experiment/${normalizedId}/${nextSectionKey}`} className="btn btn-primary btn-sm">
+                  Next: {sections.find(s => s.key === nextSectionKey)?.label} →
+                </Link>
+              ) : null}
+            </div>
           </section>
 
           )}
