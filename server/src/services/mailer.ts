@@ -14,13 +14,15 @@ function getTransporter() {
   if (gmailUser && gmailPass) {
     return {
       transporter: nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
           user: gmailUser,
           pass: gmailPass,
         },
       }),
-      from: process.env.SMTP_FROM || `"ML-VLAB" <${gmailUser}>`,
+      from: process.env.SMTP_FROM || `"ML-VLAB Verification" <${gmailUser}>`,
     };
   }
 
@@ -91,10 +93,10 @@ export async function sendEmailVerificationOtp(email: string, otpCode: string): 
       });
 
       console.log(`✉️ Email verification OTP sent via SMTP to ${email} (MessageId: ${info.messageId})`);
-      return { success: true, messageId: info.messageId };
+      return { success: true, messageId: info.messageId, previewCode: otpCode };
     } catch (err: any) {
       console.error('SMTP Email Verification error:', err?.message || err);
-      // Fallback to dev log below if sending fails
+      return { success: false, error: `Failed to deliver email: ${err?.message || 'SMTP delivery error'}` };
     }
   }
 
@@ -106,7 +108,7 @@ export async function sendEmailVerificationOtp(email: string, otpCode: string): 
 
   return {
     success: true,
-    previewCode: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+    previewCode: otpCode,
   };
 }
 
@@ -157,9 +159,10 @@ export async function sendPasswordResetOtp(email: string, otpCode: string): Prom
       });
 
       console.log(`🔑 Password reset OTP sent via SMTP to ${email} (MessageId: ${info.messageId})`);
-      return { success: true, messageId: info.messageId };
+      return { success: true, messageId: info.messageId, previewCode: otpCode };
     } catch (err: any) {
       console.error('SMTP Password Reset error:', err?.message || err);
+      return { success: false, error: `Failed to deliver password reset email: ${err?.message || 'SMTP delivery error'}` };
     }
   }
 
@@ -171,6 +174,73 @@ export async function sendPasswordResetOtp(email: string, otpCode: string): Prom
 
   return {
     success: true,
-    previewCode: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+    previewCode: otpCode,
+  };
+}
+
+export async function sendLoginOtp(email: string, otpCode: string): Promise<SendOtpResult> {
+  const mailConfig = getTransporter();
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1117; color: #e6edf3; padding: 24px; margin: 0; }
+          .card { max-width: 500px; margin: 0 auto; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+          .logo-badge { display: inline-block; padding: 4px 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 16px; }
+          h1 { font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 12px; }
+          p { font-size: 14px; line-height: 1.6; color: #8b949e; margin-bottom: 24px; }
+          .otp-box { background: #0d1117; border: 2px dashed #38bdf8; border-radius: 8px; text-align: center; padding: 20px; margin-bottom: 24px; }
+          .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #38bdf8; }
+          .footer { font-size: 12px; color: #484f58; text-align: center; margin-top: 32px; border-top: 1px solid #21262d; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="logo-badge">ML-VLAB</div>
+          <h1>Login Verification Code</h1>
+          <p>We received a request to sign in to your ML-VLAB account associated with <strong>${email}</strong>. Use the single-use verification code below:</p>
+          <div class="otp-box">
+            <div class="otp-code">${otpCode}</div>
+          </div>
+          <p>This login code will expire in <strong>10 minutes</strong>.</p>
+          <p>If you did not request this login code, you can safely ignore this email.</p>
+          <div class="footer">
+            © ${new Date().getFullYear()} Machine Learning Virtual Laboratory.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  if (mailConfig) {
+    try {
+      const info = await mailConfig.transporter.sendMail({
+        from: mailConfig.from,
+        to: email,
+        subject: 'Your Login Verification Code - ML-VLAB',
+        text: `ML-VLAB\nMachine Learning Virtual Laboratory\n\nLogin Verification Code\n\nYour single-use login code is:\n${otpCode}\n\nThis code will expire in 10 minutes.`,
+        html: htmlContent,
+      });
+
+      console.log(`🔐 Login OTP sent via SMTP to ${email} (MessageId: ${info.messageId})`);
+      return { success: true, messageId: info.messageId, previewCode: otpCode };
+    } catch (err: any) {
+      console.error('SMTP Login OTP error:', err?.message || err);
+      return { success: false, error: `Failed to deliver login email: ${err?.message || 'SMTP delivery error'}` };
+    }
+  }
+
+  // Development / fallback mode: log to server console
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log(`🔐 LOGIN OTP DISPATCHED FOR: ${email}`);
+  console.log(`👉 CODE: [ ${otpCode} ] (Valid for 10 minutes)`);
+  console.log('═══════════════════════════════════════════════════════════');
+
+  return {
+    success: true,
+    previewCode: otpCode,
   };
 }

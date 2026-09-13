@@ -18,6 +18,8 @@ interface AuthContextType {
   isTeacher: boolean;
   isLoading: boolean;
   login: (email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string }>;
+  sendLoginOtp: (email: string, role?: string) => Promise<{ success: boolean; error?: string; message?: string; devPreviewCode?: string }>;
+  loginWithOtp: (email: string, otp: string, role?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (data: { studentId?: string; name: string; email: string; password: string; role?: string }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string; devPreviewCode?: string }>;
   verifyEmail: (email: string, otp: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   resendVerification: (email: string) => Promise<{ success: boolean; error?: string; message?: string; devPreviewCode?: string }>;
@@ -100,6 +102,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err) {
       return { success: false, error: 'Network error connecting to authentication server.' };
+    }
+  }, []);
+
+  const sendLoginOtp = useCallback(async (email: string, role?: string) => {
+    try {
+      const res = await fetch('/api/auth/send-login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to send login code.' };
+      }
+      return {
+        success: true,
+        message: data.message,
+        devPreviewCode: data.devPreviewCode,
+      };
+    } catch (err) {
+      return { success: false, error: 'Network error sending login code.' };
+    }
+  }, []);
+
+  const loginWithOtp = useCallback(async (email: string, otp: string, role?: string) => {
+    try {
+      const res = await fetch('/api/auth/verify-login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Login code verification failed.' };
+      }
+
+      if (data.token && data.user) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      }
+
+      return { success: true, user: data.user };
+    } catch (err) {
+      return { success: false, error: 'Network error verifying login code.' };
     }
   }, []);
 
@@ -199,6 +247,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isTeacher: user?.role === 'teacher',
         isLoading,
         login,
+        sendLoginOtp,
+        loginWithOtp,
         register,
         verifyEmail,
         resendVerification,

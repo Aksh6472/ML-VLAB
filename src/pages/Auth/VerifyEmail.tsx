@@ -136,12 +136,17 @@ export default function VerifyEmail() {
               fontSize: 'var(--text-sm)',
               marginBottom: 'var(--space-4)',
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              flexDirection: 'column',
+              gap: '4px',
             }}
           >
-            <span>📩</span>
-            <span>{infoMsg}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📩</span>
+              <span>{infoMsg}</span>
+            </div>
+            <span style={{ fontSize: '11px', color: '#a7f3d0', marginTop: '2px' }}>
+              💡 Check your <strong>Spam or Junk</strong> folder if you don't see the email in your primary inbox.
+            </span>
           </div>
         )}
 

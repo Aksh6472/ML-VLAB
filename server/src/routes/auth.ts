@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { JWT_SECRET, requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { sendPasswordResetOtp, sendEmailVerificationOtp } from '../services/mailer.js';
+import { sendPasswordResetOtp, sendEmailVerificationOtp, sendLoginOtp } from '../services/mailer.js';
 
 export const authRouter = Router();
 
@@ -243,6 +243,11 @@ authRouter.post('/resend-verification', async (req, res): Promise<void> => {
 
     const mailResult = await sendEmailVerificationOtp(trimmedEmail, otpCode);
 
+    if (!mailResult.success) {
+      res.status(500).json({ error: mailResult.error || 'Failed to resend verification code via email.' });
+      return;
+    }
+
     res.json({
       success: true,
       message: 'A new 6-digit verification code has been sent to your email.',
@@ -318,6 +323,170 @@ authRouter.post('/login', async (req, res): Promise<void> => {
   } catch (err: any) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal login error. Please try again.' });
+  }
+});
+
+authRouter.post('/send-login-otp', async (req, res): Promise<void> => {
+  try {
+    const { email, role } = req.body;
+
+    if (!email || !String(email).trim()) {
+      res.status(400).json({ error: 'Email address is required.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      res.status(400).json({ error: 'Please enter a valid email address.' });
+      return;
+    }
+
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
+
+    if (!user) {
+      res.status(404).json({ error: 'No account found with this email address. Please register first.' });
+      return;
+    }
+
+    if (role) {
+      const normalizedReqRole = (role === 'faculty' || role === 'teacher') ? 'teacher' : 'student';
+      if (user.role !== normalizedReqRole) {
+        res.status(401).json({ error: `This account is registered as a ${user.role === 'teacher' ? 'Faculty' : 'Student'}. Please select the correct role.` });
+        return;
+      }
+    }
+
+    if (user.verification_last_sent) {
+      const lastSentTime = new Date(user.verification_last_sent).getTime();
+      const nowMs = Date.now();
+      if (nowMs - lastSentTime < 60 * 1000) {
+        const waitSec = Math.ceil((60 * 1000 - (nowMs - lastSentTime)) / 1000);
+        res.status(429).json({ error: `Please wait ${waitSec} seconds before requesting another code.` });
+        return;
+      }
+    }
+
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const nowIso = new Date().toISOString();
+
+    await db.prepare(`
+      UPDATE users 
+      SET verification_otp_hash = ?, verification_otp_expires = ?, verification_attempts = 0, verification_last_sent = ? 
+      WHERE id = ?
+    `).run(otpHash, expiresAt, nowIso, user.id);
+
+    const mailResult = await sendLoginOtp(trimmedEmail, otpCode);
+
+    if (!mailResult.success) {
+      res.status(500).json({ error: mailResult.error || 'Failed to send login code via email.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'A 6-digit login code has been sent to your Gmail.',
+      ...(mailResult.previewCode ? { devPreviewCode: mailResult.previewCode } : {}),
+    });
+  } catch (err: any) {
+    console.error('Send login OTP error:', err);
+    res.status(500).json({ error: 'Failed to send login code. Please try again.' });
+  }
+});
+
+authRouter.post('/verify-login-otp', async (req, res): Promise<void> => {
+  try {
+    const { email, otp, role } = req.body;
+
+    if (!email || !otp) {
+      res.status(400).json({ error: 'Email and 6-digit login code are required.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      res.status(400).json({ error: 'Login code must be exactly 6 digits.' });
+      return;
+    }
+
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
+
+    if (!user) {
+      res.status(404).json({ error: 'Account not found.' });
+      return;
+    }
+
+    if (role) {
+      const normalizedReqRole = (role === 'faculty' || role === 'teacher') ? 'teacher' : 'student';
+      if (user.role !== normalizedReqRole) {
+        res.status(401).json({ error: `This account is registered as a ${user.role === 'teacher' ? 'Faculty' : 'Student'}. Please select the correct role.` });
+        return;
+      }
+    }
+
+    if (!user.verification_otp_hash || !user.verification_otp_expires) {
+      res.status(400).json({ error: 'No active login code found. Please request a new code.' });
+      return;
+    }
+
+    if (new Date(user.verification_otp_expires).getTime() < Date.now()) {
+      res.status(400).json({ error: 'This login code has expired. Please request a new code.' });
+      return;
+    }
+
+    if (user.verification_attempts >= 5) {
+      res.status(429).json({ error: 'Too many incorrect attempts. Please request a new login code.' });
+      return;
+    }
+
+    const inputHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+    const storedHashBuf = Buffer.from(user.verification_otp_hash, 'hex');
+    const inputHashBuf = Buffer.from(inputHash, 'hex');
+
+    const isMatch = storedHashBuf.length === inputHashBuf.length && crypto.timingSafeEqual(storedHashBuf, inputHashBuf);
+
+    if (!isMatch) {
+      const newAttempts = (user.verification_attempts || 0) + 1;
+      await db.prepare('UPDATE users SET verification_attempts = ? WHERE id = ?').run(newAttempts, user.id);
+      const remaining = 5 - newAttempts;
+      if (remaining <= 0) {
+        res.status(429).json({ error: 'Login code locked due to failed attempts. Please request a new code.' });
+        return;
+      }
+      res.status(400).json({ error: `Invalid login code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.` });
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    await db.prepare(`
+      UPDATE users 
+      SET email_verified = 1, verification_otp_hash = NULL, verification_otp_expires = NULL, verification_attempts = 0, last_login = ? 
+      WHERE id = ?
+    `).run(nowIso, user.id);
+
+    const userPayload = {
+      id: user.id,
+      studentId: user.student_id || undefined,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      success: true,
+      message: 'Login successful.',
+      token,
+      user: userPayload,
+    });
+  } catch (err: any) {
+    console.error('Verify login OTP error:', err);
+    res.status(500).json({ error: 'Failed to verify login code. Please try again.' });
   }
 });
 
