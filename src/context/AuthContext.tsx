@@ -17,8 +17,10 @@ interface AuthContextType {
   isStudent: boolean;
   isTeacher: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: { studentId?: string; name: string; email: string; password: string; role?: string }) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string }>;
+  register: (data: { studentId?: string; name: string; email: string; password: string; role?: string }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string; devPreviewCode?: string }>;
+  verifyEmail: (email: string, otp: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  resendVerification: (email: string) => Promise<{ success: boolean; error?: string; message?: string; devPreviewCode?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -83,7 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        return { success: false, error: data.error || 'Login failed.' };
+        return {
+          success: false,
+          error: data.error || 'Login failed.',
+          requiresVerification: data.requiresVerification,
+          email: data.email,
+        };
       }
 
       setToken(data.token);
@@ -105,16 +112,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const resData = await res.json();
       if (!res.ok) {
-        return { success: false, error: resData.error || 'Registration failed.' };
+        return {
+          success: false,
+          error: resData.error || 'Registration failed.',
+          requiresVerification: resData.requiresVerification,
+          email: resData.email,
+        };
       }
 
-      setToken(resData.token);
-      setUser(resData.user);
-      localStorage.setItem(TOKEN_KEY, resData.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(resData.user));
-      return { success: true };
+      // Successful registration now requires OTP email verification
+      return {
+        success: true,
+        requiresVerification: true,
+        email: resData.email || data.email,
+        devPreviewCode: resData.devPreviewCode,
+      };
     } catch (err) {
       return { success: false, error: 'Network error connecting to registration server.' };
+    }
+  }, []);
+
+  const verifyEmail = useCallback(async (email: string, otp: string) => {
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Verification failed.' };
+      }
+
+      if (data.token && data.user) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      }
+
+      return { success: true, user: data.user };
+    } catch (err) {
+      return { success: false, error: 'Network error verifying email.' };
+    }
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Resend failed.' };
+      }
+      return {
+        success: true,
+        message: data.message,
+        devPreviewCode: data.devPreviewCode,
+      };
+    } catch (err) {
+      return { success: false, error: 'Network error resending code.' };
     }
   }, []);
 
@@ -140,6 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
+        verifyEmail,
+        resendVerification,
         logout,
         refreshUser,
       }}

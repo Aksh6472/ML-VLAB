@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import pg from 'pg';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -132,6 +132,11 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
+      email_verified INTEGER DEFAULT 0,
+      verification_otp_hash TEXT,
+      verification_otp_expires TEXT,
+      verification_attempts INTEGER DEFAULT 0,
+      verification_last_sent TEXT,
       created_at TEXT NOT NULL,
       last_login TEXT
     );
@@ -271,6 +276,19 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
       // Ignore if table or column already exists or minor notice
     }
   }
+
+  const pgUserColumns = [
+    'ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS verification_otp_hash TEXT',
+    'ADD COLUMN IF NOT EXISTS verification_otp_expires TEXT',
+    'ADD COLUMN IF NOT EXISTS verification_attempts INTEGER DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS verification_last_sent TEXT'
+  ];
+  for (const colDef of pgUserColumns) {
+    try {
+      await pool.query(`ALTER TABLE users ${colDef}`);
+    } catch (e) {}
+  }
 }
 
 function createSqliteSchema(sqlDb: SqlDatabase): void {
@@ -282,6 +300,11 @@ function createSqliteSchema(sqlDb: SqlDatabase): void {
       email TEXT UNIQUE NOT NULL COLLATE NOCASE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
+      email_verified INTEGER DEFAULT 0,
+      verification_otp_hash TEXT,
+      verification_otp_expires TEXT,
+      verification_attempts INTEGER DEFAULT 0,
+      verification_last_sent TEXT,
       created_at TEXT NOT NULL,
       last_login TEXT
     );
@@ -457,6 +480,25 @@ async function doInitDatabase(): Promise<void> {
         sqlDb.exec(`ALTER TABLE faculty_tests ADD COLUMN ${col}`);
       } catch (e) {}
     }
+
+    const userCols = [
+      'email_verified INTEGER DEFAULT 0',
+      'verification_otp_hash TEXT',
+      'verification_otp_expires TEXT',
+      'verification_attempts INTEGER DEFAULT 0',
+      'verification_last_sent TEXT'
+    ];
+    for (const col of userCols) {
+      try {
+        sqlDb.exec(`ALTER TABLE users ADD COLUMN ${col}`);
+      } catch (e) {}
+    }
+
+    // Auto-verify pre-existing users for backward compatibility
+    try {
+      sqlDb.exec(`UPDATE users SET email_verified = 1 WHERE email_verified IS NULL`);
+    } catch (e) {}
+
     saveDb();
   }
 
@@ -475,8 +517,8 @@ async function doInitDatabase(): Promise<void> {
       const passwordHash = await bcrypt.hash(demoTeacherPassword, 10);
       const now = new Date().toISOString();
       await db.prepare(`
-        INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (student_id, name, email, password_hash, role, email_verified, created_at, last_login)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
       `).run('FAC-001', 'Dr. Aris Thorne (Instructor)', demoTeacherEmail, passwordHash, 'teacher', now, now);
       console.log(`Demo Teacher account initialized (${demoTeacherEmail})`);
     }
@@ -486,8 +528,8 @@ async function doInitDatabase(): Promise<void> {
       const passwordHash = await bcrypt.hash(demoStudentPassword, 10);
       const now = new Date().toISOString();
       await db.prepare(`
-        INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (student_id, name, email, password_hash, role, email_verified, created_at, last_login)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
       `).run('RA2411027010104', 'Akshayanivashini', demoStudentEmail, passwordHash, 'student', now, now);
       console.log(`Demo Student account initialized (${demoStudentEmail})`);
     }

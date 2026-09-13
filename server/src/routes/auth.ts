@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { JWT_SECRET, requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { sendPasswordResetOtp } from '../services/mailer.js';
+import { sendPasswordResetOtp, sendEmailVerificationOtp } from '../services/mailer.js';
 
 export const authRouter = Router();
 
@@ -50,8 +50,16 @@ authRouter.post('/register', async (req, res): Promise<void> => {
       return;
     }
 
-    const existingEmail = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail);
+    const existingEmail = await db.prepare('SELECT id, email_verified FROM users WHERE email = ?').get(trimmedEmail) as any;
     if (existingEmail) {
+      if (existingEmail.email_verified === 0) {
+        res.status(409).json({
+          requiresVerification: true,
+          email: trimmedEmail,
+          error: 'An unverified account with this email address already exists. Please verify your email.',
+        });
+        return;
+      }
       res.status(409).json({ error: 'An account with this email address already exists.' });
       return;
     }
@@ -67,32 +75,182 @@ authRouter.post('/register', async (req, res): Promise<void> => {
     const passwordHash = await bcrypt.hash(password, 10);
     const now = new Date().toISOString();
 
-    const result = await db.prepare(`
-      INSERT INTO users (student_id, name, email, password_hash, role, created_at, last_login)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, now, now);
+    // Generate secure 6-digit OTP
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
-    const insertedUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
-    const userId = insertedUser?.id || Number(result.lastInsertRowid);
+    await db.prepare(`
+      INSERT INTO users (student_id, name, email, password_hash, role, email_verified, verification_otp_hash, verification_otp_expires, verification_attempts, verification_last_sent, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, 0, ?, ?, 0, ?, ?, ?)
+    `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, otpHash, expiresAt, now, now, now);
 
-    const userPayload = {
-      id: userId,
-      studentId: trimmedStudentId,
-      name: name.trim(),
-      email: trimmedEmail,
-      role: assignedRole as 'student' | 'teacher',
-    };
-
-    const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
+    // Dispatch verification email
+    const mailResult = await sendEmailVerificationOtp(trimmedEmail, otpCode);
 
     res.status(201).json({
-      message: 'Account created successfully.',
-      token,
-      user: userPayload,
+      success: true,
+      requiresVerification: true,
+      email: trimmedEmail,
+      message: 'Account created successfully. Please enter the 6-digit verification code sent to your email.',
+      ...(mailResult.previewCode ? { devPreviewCode: mailResult.previewCode } : {}),
     });
   } catch (err: any) {
     console.error('Registration error:', err);
     res.status(500).json({ error: 'Failed to create account. Please try again later.' });
+  }
+});
+
+authRouter.post('/verify-email', async (req, res): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      res.status(400).json({ error: 'Verification code must be exactly 6 digits.' });
+      return;
+    }
+
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
+
+    if (!user) {
+      res.status(404).json({ error: 'Account not found.' });
+      return;
+    }
+
+    if (user.email_verified) {
+      res.json({ success: true, message: 'Email is already verified.' });
+      return;
+    }
+
+    if (!user.verification_otp_hash || !user.verification_otp_expires) {
+      res.status(400).json({ error: 'No active verification code found. Please request a new code.' });
+      return;
+    }
+
+    // Check expiration (10 minutes)
+    if (new Date(user.verification_otp_expires).getTime() < Date.now()) {
+      res.status(400).json({ error: 'This verification code has expired. Please request a new code.' });
+      return;
+    }
+
+    // Check brute force limit (5 attempts)
+    if (user.verification_attempts >= 5) {
+      res.status(429).json({ error: 'Verification temporarily locked due to too many failed attempts. Please request a new verification code.' });
+      return;
+    }
+
+    // Constant-time hash comparison
+    const inputHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+    const storedHashBuf = Buffer.from(user.verification_otp_hash, 'hex');
+    const inputHashBuf = Buffer.from(inputHash, 'hex');
+
+    const isMatch = storedHashBuf.length === inputHashBuf.length && crypto.timingSafeEqual(storedHashBuf, inputHashBuf);
+
+    if (!isMatch) {
+      const newAttempts = (user.verification_attempts || 0) + 1;
+      await db.prepare('UPDATE users SET verification_attempts = ? WHERE id = ?').run(newAttempts, user.id);
+      const remaining = 5 - newAttempts;
+      if (remaining <= 0) {
+        res.status(429).json({ error: 'Verification temporarily locked. Please request a new verification code.' });
+        return;
+      }
+      res.status(400).json({ error: `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.` });
+      return;
+    }
+
+    // Successful verification
+    const nowIso = new Date().toISOString();
+    await db.prepare(`
+      UPDATE users 
+      SET email_verified = 1, verification_otp_hash = NULL, verification_otp_expires = NULL, verification_attempts = 0, last_login = ? 
+      WHERE id = ?
+    `).run(nowIso, user.id);
+
+    const userPayload = {
+      id: user.id,
+      studentId: user.student_id || undefined,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully.',
+      token,
+      user: userPayload,
+    });
+  } catch (err: any) {
+    console.error('Email verification error:', err);
+    res.status(500).json({ error: 'Failed to verify email. Please try again.' });
+  }
+});
+
+authRouter.post('/resend-verification', async (req, res): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !String(email).trim()) {
+      res.status(400).json({ error: 'Email address is required.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(trimmedEmail) as any;
+
+    if (!user) {
+      res.status(404).json({ error: 'Account not found.' });
+      return;
+    }
+
+    if (user.email_verified) {
+      res.status(400).json({ error: 'Email is already verified.' });
+      return;
+    }
+
+    // 60-second cooldown check
+    if (user.verification_last_sent) {
+      const lastSentTime = new Date(user.verification_last_sent).getTime();
+      const nowMs = Date.now();
+      if (nowMs - lastSentTime < 60 * 1000) {
+        const waitSec = Math.ceil((60 * 1000 - (nowMs - lastSentTime)) / 1000);
+        res.status(429).json({ error: `Please wait ${waitSec} seconds before requesting another code.` });
+        return;
+      }
+    }
+
+    // Generate new OTP
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const nowIso = new Date().toISOString();
+
+    await db.prepare(`
+      UPDATE users 
+      SET verification_otp_hash = ?, verification_otp_expires = ?, verification_attempts = 0, verification_last_sent = ? 
+      WHERE id = ?
+    `).run(otpHash, expiresAt, nowIso, user.id);
+
+    const mailResult = await sendEmailVerificationOtp(trimmedEmail, otpCode);
+
+    res.json({
+      success: true,
+      message: 'A new 6-digit verification code has been sent to your email.',
+      ...(mailResult.previewCode ? { devPreviewCode: mailResult.previewCode } : {}),
+    });
+  } catch (err: any) {
+    console.error('Resend verification error:', err);
+    res.status(500).json({ error: 'Failed to resend verification code.' });
   }
 });
 
@@ -116,6 +274,16 @@ authRouter.post('/login', async (req, res): Promise<void> => {
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       res.status(401).json({ error: 'Invalid email or password.' });
+      return;
+    }
+
+    // Check if email has been verified
+    if (user.email_verified === 0 || user.email_verified === false) {
+      res.status(403).json({
+        requiresVerification: true,
+        email: user.email,
+        error: 'Your email address has not been verified yet. Please enter the verification code sent to your email.',
+      });
       return;
     }
 

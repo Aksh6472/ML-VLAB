@@ -172,13 +172,11 @@ cp .env.example server/.env
 Define the required variables inside `server/.env`:
 
 ```env
-PORT=5000
+PORT=5001
 DATABASE_URL=postgresql://user:password@localhost:5432/vlab_db
 JWT_SECRET=your_secure_jwt_secret_key
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=user@example.com
-SMTP_PASS=password
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-16-character-app-password
 ```
 
 ### Running the Application

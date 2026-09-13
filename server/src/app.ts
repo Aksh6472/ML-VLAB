@@ -11,7 +11,7 @@ import { teacherRouter } from './routes/teacher.js';
 import { classesRouter } from './routes/classes.js';
 import { studentTestsRouter } from './routes/studentTests.js';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const app = express();
 
