@@ -50,16 +50,8 @@ authRouter.post('/register', async (req, res): Promise<void> => {
       return;
     }
 
-    const existingEmail = await db.prepare('SELECT id, email_verified FROM users WHERE email = ?').get(trimmedEmail) as any;
+    const existingEmail = await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail) as any;
     if (existingEmail) {
-      if (existingEmail.email_verified === 0) {
-        res.status(409).json({
-          requiresVerification: true,
-          email: trimmedEmail,
-          error: 'An unverified account with this email address already exists. Please verify your email.',
-        });
-        return;
-      }
       res.status(409).json({ error: 'An account with this email address already exists.' });
       return;
     }
@@ -75,25 +67,26 @@ authRouter.post('/register', async (req, res): Promise<void> => {
     const passwordHash = await bcrypt.hash(password, 10);
     const now = new Date().toISOString();
 
-    // Generate secure 6-digit OTP
-    const otpCode = String(crypto.randomInt(100000, 1000000));
-    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+    const insertResult = await db.prepare(`
+      INSERT INTO users (student_id, name, email, password_hash, role, email_verified, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+    `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, now, now);
 
-    await db.prepare(`
-      INSERT INTO users (student_id, name, email, password_hash, role, email_verified, verification_otp_hash, verification_otp_expires, verification_attempts, verification_last_sent, created_at, last_login)
-      VALUES (?, ?, ?, ?, ?, 0, ?, ?, 0, ?, ?, ?)
-    `).run(trimmedStudentId, name.trim(), trimmedEmail, passwordHash, assignedRole, otpHash, expiresAt, now, now, now);
+    const userPayload = {
+      id: insertResult.lastInsertRowid,
+      studentId: trimmedStudentId || undefined,
+      name: name.trim(),
+      email: trimmedEmail,
+      role: assignedRole,
+    };
 
-    // Dispatch verification email
-    const mailResult = await sendEmailVerificationOtp(trimmedEmail, otpCode);
+    const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       success: true,
-      requiresVerification: true,
-      email: trimmedEmail,
-      message: 'Account created successfully. Please enter the 6-digit verification code sent to your email.',
-      ...(mailResult.previewCode ? { devPreviewCode: mailResult.previewCode } : {}),
+      message: 'Account created successfully.',
+      token,
+      user: userPayload,
     });
   } catch (err: any) {
     console.error('Registration error:', err);
@@ -282,15 +275,6 @@ authRouter.post('/login', async (req, res): Promise<void> => {
       return;
     }
 
-    // Check if email has been verified
-    if (user.email_verified === 0 || user.email_verified === false) {
-      res.status(403).json({
-        requiresVerification: true,
-        email: user.email,
-        error: 'Your email address has not been verified yet. Please enter the verification code sent to your email.',
-      });
-      return;
-    }
 
     // Role check - strictly enforce role selection from login UI
     if (role) {

@@ -67,25 +67,11 @@ export default function Register() {
     });
     setLoading(false);
 
-    if (result.success && result.requiresVerification) {
-      navigate('/verify-email', {
-        state: {
-          email: result.email || email,
-          message: 'Account created successfully! Please enter the 6-digit verification code sent to your email.',
-          devPreviewCode: result.devPreviewCode,
-        },
-      });
-    } else if (!result.success) {
-      if (result.requiresVerification && result.email) {
-        navigate('/verify-email', {
-          state: {
-            email: result.email,
-            message: result.error,
-          },
-        });
-      } else {
-        setError(result.error || 'Registration failed. Please check your information.');
-      }
+    if (result.success) {
+      const dest = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
+      navigate(dest, { replace: true });
+    } else {
+      setError(result.error || 'Registration failed. Please check your information.');
     }
   };
 

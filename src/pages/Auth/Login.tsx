@@ -74,13 +74,6 @@ export default function Login() {
       const defaultDashboard = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
       const dest = isValidSubRoute ? from : defaultDashboard;
       navigate(dest, { replace: true });
-    } else if (result.requiresVerification && result.email) {
-      navigate('/verify-email', {
-        state: {
-          email: result.email,
-          message: result.error || 'Your account needs verification. Please enter the code sent to your email.',
-        },
-      });
     } else {
       setError(result.error || 'Failed to sign in. Please verify your credentials.');
     }

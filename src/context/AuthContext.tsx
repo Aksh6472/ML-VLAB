@@ -163,17 +163,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           success: false,
           error: resData.error || 'Registration failed.',
-          requiresVerification: resData.requiresVerification,
-          email: resData.email,
         };
       }
 
-      // Successful registration now requires OTP email verification
+      if (resData.token && resData.user) {
+        setToken(resData.token);
+        setUser(resData.user);
+        localStorage.setItem(TOKEN_KEY, resData.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(resData.user));
+      }
+
       return {
         success: true,
-        requiresVerification: true,
-        email: resData.email || data.email,
-        devPreviewCode: resData.devPreviewCode,
+        user: resData.user,
       };
     } catch (err) {
       return { success: false, error: 'Network error connecting to registration server.' };

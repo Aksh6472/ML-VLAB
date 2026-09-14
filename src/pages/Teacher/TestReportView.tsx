@@ -347,7 +347,7 @@ export default function TestReportView() {
       {inspectStudent && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-xl)', maxWidth: '750px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: 'var(--shadow-xl)', position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-primary)', pb: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-primary)', paddingBottom: '16px', marginBottom: '20px' }}>
               <div>
                 <span className="badge badge-navy" style={{ marginBottom: '6px', display: 'inline-block' }}>Student Response Audit</span>
                 <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: 0 }}>{inspectStudent.name} ({inspectStudent.studentRollId})</h2>

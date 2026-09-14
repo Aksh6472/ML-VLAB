@@ -132,7 +132,7 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
-      email_verified INTEGER DEFAULT 0,
+      email_verified INTEGER DEFAULT 1,
       verification_otp_hash TEXT,
       verification_otp_expires TEXT,
       verification_attempts INTEGER DEFAULT 0,
@@ -278,7 +278,7 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
   }
 
   const pgUserColumns = [
-    'ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 1',
     'ADD COLUMN IF NOT EXISTS verification_otp_hash TEXT',
     'ADD COLUMN IF NOT EXISTS verification_otp_expires TEXT',
     'ADD COLUMN IF NOT EXISTS verification_attempts INTEGER DEFAULT 0',
@@ -289,6 +289,9 @@ async function createPostgresSchema(pool: pg.Pool): Promise<void> {
       await pool.query(`ALTER TABLE users ${colDef}`);
     } catch (e) {}
   }
+  try {
+    await pool.query(`UPDATE users SET email_verified = 1 WHERE email_verified = 0 OR email_verified IS NULL`);
+  } catch (e) {}
 }
 
 function createSqliteSchema(sqlDb: SqlDatabase): void {
@@ -300,7 +303,7 @@ function createSqliteSchema(sqlDb: SqlDatabase): void {
       email TEXT UNIQUE NOT NULL COLLATE NOCASE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
-      email_verified INTEGER DEFAULT 0,
+      email_verified INTEGER DEFAULT 1,
       verification_otp_hash TEXT,
       verification_otp_expires TEXT,
       verification_attempts INTEGER DEFAULT 0,
@@ -482,7 +485,7 @@ async function doInitDatabase(): Promise<void> {
     }
 
     const userCols = [
-      'email_verified INTEGER DEFAULT 0',
+      'email_verified INTEGER DEFAULT 1',
       'verification_otp_hash TEXT',
       'verification_otp_expires TEXT',
       'verification_attempts INTEGER DEFAULT 0',
@@ -494,9 +497,9 @@ async function doInitDatabase(): Promise<void> {
       } catch (e) {}
     }
 
-    // Auto-verify pre-existing users for backward compatibility
+    // Auto-verify all users
     try {
-      sqlDb.exec(`UPDATE users SET email_verified = 1 WHERE email_verified IS NULL`);
+      sqlDb.exec(`UPDATE users SET email_verified = 1 WHERE email_verified = 0 OR email_verified IS NULL`);
     } catch (e) {}
 
     saveDb();
