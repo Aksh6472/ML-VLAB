@@ -243,11 +243,6 @@ export default function ExperimentPage() {
               </div>
             </div>
 
-            {/* Video Introduction Explainer Card */}
-            <div style={{ marginTop: 'var(--space-6)' }}>
-              <ExperimentVideoPlayer experimentNumber={expMeta.number} title={expMeta.title} />
-            </div>
-
             {/* Section Footer Navigation */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-8)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border-primary)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
               {prevSectionKey ? (
@@ -282,6 +277,11 @@ export default function ExperimentPage() {
                   Mark Complete
                 </button>
               )}
+            </div>
+
+            {/* Video Lecture / Explanation Card */}
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <ExperimentVideoPlayer experimentNumber={expMeta.number} title={expMeta.title} />
             </div>
 
             {content.theory.map((section: any) => (
