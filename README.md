@@ -1,4 +1,4 @@
-# ML Virtual Lab
+# SRM ML Virtual Lab 
 
 An interactive, web-based Virtual Laboratory designed for learning Machine Learning (ML) core concepts through structured theory, step-by-step procedure guides, code examples, interactive algorithm visualizations, self-assessment quizzes, and real-time execution tools.
 
